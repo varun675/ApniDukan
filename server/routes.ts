@@ -15,9 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const amount = String(am);
     const tn = `Payment to ${name}`;
 
-    const upiEnc = encodeURIComponent(upiId);
-    const nameEnc = encodeURIComponent(name);
-    const tnEnc = encodeURIComponent(tn);
+    const safeName = name.replace(/[^a-zA-Z0-9 ]/g, '').trim();
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -256,26 +254,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <script>
     var badge = document.getElementById('statusBadge');
 
-    var upiParams = "pa=${upiEnc}&pn=${nameEnc}&tn=${tnEnc}&am=${amount}&cu=INR";
+    var pa = "${upiId}";
+    var payeeName = "${safeName}";
+    var amt = "${amount}";
     var isAndroid = /android/i.test(navigator.userAgent);
 
+    function buildUpiParams() {
+      return "pa=" + pa + "&pn=" + payeeName + "&am=" + amt + "&cu=INR";
+    }
+
     function openApp(app) {
+      var params = buildUpiParams();
       var link = "";
       if (isAndroid) {
         if (app === 'phonepe') {
-          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=com.phonepe.app;end";
+          link = "intent://pay?" + params + "#Intent;scheme=upi;package=com.phonepe.app;end";
         } else if (app === 'gpay') {
-          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end";
+          link = "intent://pay?" + params + "#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end";
         } else if (app === 'paytm') {
-          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=net.one97.paytm;end";
+          link = "intent://pay?" + params + "#Intent;scheme=upi;package=net.one97.paytm;end";
         }
       } else {
         if (app === 'phonepe') {
-          link = "phonepe://pay?" + upiParams;
+          link = "phonepe://pay?" + params;
         } else if (app === 'gpay') {
-          link = "tez://upi/pay?" + upiParams;
+          link = "tez://upi/pay?" + params;
         } else if (app === 'paytm') {
-          link = "paytmmp://pay?" + upiParams;
+          link = "paytmmp://pay?" + params;
         }
       }
       if (link) {

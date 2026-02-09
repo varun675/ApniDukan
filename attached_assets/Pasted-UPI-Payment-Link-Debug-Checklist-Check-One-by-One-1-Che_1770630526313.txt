@@ -1,0 +1,142 @@
+UPI Payment Link Debug Checklist (Check One-by-One)
+1️⃣ Check UPI ID Format
+
+Ensure UPI ID looks like: username@bankname
+
+No spaces
+
+All lowercase
+
+Confirm the UPI ID exists and is active
+
+Try sending ₹1 from any UPI app manually to confirm it works
+
+2️⃣ Ensure merchant information is correct (optional but recommended)
+
+If you added:
+
+tn=some+note
+mc=1234
+tr=order123
+
+
+Then check:
+
+tn (transaction note) is under 50 characters
+
+mc (merchant code) should be removed unless you are a registered merchant
+
+tr (transaction reference) should be unique (but optional)
+
+If unsure → remove extra parameters, keep only mandatory: pa, pn, am.
+
+3️⃣ Check the Amount Format
+
+Must be numeric: am=100
+
+No currency symbols
+
+No commas
+
+No decimal errors (am=100.00 is ok, but 100,00 is wrong)
+
+4️⃣ URL Encoding Issues
+
+Make sure the link is properly URL-encoded.
+
+Examples of common mistakes:
+
+Space → %20
+
+& inside text not encoded
+
++ sometimes breaks UPI apps
+
+👉 Use a URL encoder for full safety.
+
+5️⃣ HTTP vs HTTPS
+
+If you're redirecting from your HTML page → must be HTTPS
+
+PhonePe rejects non-secure redirects
+
+6️⃣ Hidden Characters / Copy-Paste Errors
+
+Sometimes invisible characters break the URL.
+
+Check for:
+
+newline
+
+unicode spaces
+
+trailing spaces in the link
+
+7️⃣ PhonePe-specific requirements
+
+Some UPI apps are strict:
+
+PhonePe requires these to be valid:
+
+pa is correct and active
+
+pn is not empty
+
+am is present (if sent from merchant)
+
+PhonePe sometimes rejects:
+
+merchant code when not verified
+
+missing pn
+
+extra random parameters
+
+8️⃣ Test in two ways
+
+❗Open link from a browser
+
+❗Paste the upi://pay?.... directly into PhonePe "Search Bar"
+
+If one fails and one works → the issue is encoding/redirect.
+
+9️⃣ Try with a minimal UPI link
+
+Use a very clean version first:
+
+upi://pay?pa=yourupi@bank&pn=YourName&am=10&tn=Test
+
+
+If this works → your expanded parameters are wrong.
+
+🔟 Verify with Google Pay
+
+If GPay works but PhonePe fails:
+
+PhonePe validation is stricter
+
+Remove extra params
+
+Re-encode URL
+
+⭐ Your Debug Task
+
+Go through the list:
+
+✔ Check UPI ID
+
+✔ Remove merchant code
+
+✔ Verify amount
+
+✔ URL encode
+
+✔ HTTPS hosting
+
+✔ Remove hidden characters
+
+✔ Minimal link test
+
+✔ Test in GPay + PhonePe
+
+✔ Incrementally add params
