@@ -210,7 +210,24 @@ export default function SettingsScreen() {
                 onChangeText={(t) => setSettingsState({ ...settings, upiId: t })}
               />
               <Text style={styles.inputHint}>
-                Used in bill payment details sent via WhatsApp
+                Shown in bills so customers can pay manually
+              </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Payment Link (for WhatsApp)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="https://phon.pe/abc or https://paytm.me/xyz"
+                placeholderTextColor={Colors.textLight}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                value={settings.paymentLink || ""}
+                onChangeText={(t) => setSettingsState({ ...settings, paymentLink: t || undefined })}
+              />
+              <Text style={styles.inputHint}>
+                Paste your PhonePe / GPay / Paytm payment link here. Customers can tap this link in WhatsApp to pay you directly (works on both Android and iPhone)
               </Text>
             </View>
 
