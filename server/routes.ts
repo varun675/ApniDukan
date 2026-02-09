@@ -15,8 +15,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const amount = String(am);
     const tn = `Payment to ${name}`;
 
-    const upiParams = `pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount}&cu=INR`;
-    const upiLink = `upi://pay?${upiParams}`;
+    const upiEnc = encodeURIComponent(upiId);
+    const nameEnc = encodeURIComponent(name);
+    const tnEnc = encodeURIComponent(tn);
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -135,6 +136,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       margin-top: 12px;
       line-height: 1.5;
     }
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .app-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 4px;
+      border-radius: 14px;
+      border: 1.5px solid #f0f0f0;
+      background: #fafafa;
+      color: #333;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app-btn:active { background: #f0f0f0; border-color: #ddd; }
+    .app-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+    .app-icon.phonepe { background: #5F259F; }
+    .app-icon.gpay { background: #4285F4; }
+    .app-icon.paytm { background: #00BAF2; }
     .manual {
       margin-top: 20px;
       padding: 16px;
@@ -186,14 +223,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div class="amount"><span class="rupee">₹</span>${amount}</div>
     <div class="divider"></div>
 
-    <div class="status" id="statusBadge">Tap the button below to pay</div>
+    <div class="status" id="statusBadge">Choose your payment app</div>
 
-    <button class="pay-btn" id="payBtn" onclick="openUPI()">
-      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-      Pay &#8377;${amount}
-    </button>
+    <div class="apps-grid">
+      <button class="app-btn" onclick="openApp('phonepe')">
+        <div class="app-icon phonepe">P</div>
+        PhonePe
+      </button>
+      <button class="app-btn" onclick="openApp('gpay')">
+        <div class="app-icon gpay">G</div>
+        Google Pay
+      </button>
+      <button class="app-btn" onclick="openApp('paytm')">
+        <div class="app-icon paytm">P</div>
+        Paytm
+      </button>
+    </div>
 
-    <div class="pay-hint">Tap the button above to choose your UPI app<br>(PhonePe, GPay, Paytm, etc.)</div>
+    <div class="pay-hint">Tap your preferred app above to pay &#8377;${amount}</div>
 
     <div class="manual">
       <div class="manual-label">Or pay using UPI ID</div>
@@ -209,9 +256,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <script>
     var badge = document.getElementById('statusBadge');
 
-    function openUPI() {
-      var link = "upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount}&cu=INR";
-      window.location.href = link;
+    var upiParams = "pa=${upiEnc}&pn=${nameEnc}&tn=${tnEnc}&am=${amount}&cu=INR";
+    var isAndroid = /android/i.test(navigator.userAgent);
+
+    function openApp(app) {
+      var link = "";
+      if (isAndroid) {
+        if (app === 'phonepe') {
+          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=com.phonepe.app;end";
+        } else if (app === 'gpay') {
+          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end";
+        } else if (app === 'paytm') {
+          link = "intent://pay?" + upiParams + "#Intent;scheme=upi;package=net.one97.paytm;end";
+        }
+      } else {
+        if (app === 'phonepe') {
+          link = "phonepe://pay?" + upiParams;
+        } else if (app === 'gpay') {
+          link = "tez://upi/pay?" + upiParams;
+        } else if (app === 'paytm') {
+          link = "paytmmp://pay?" + upiParams;
+        }
+      }
+      if (link) {
+        window.location.href = link;
+      }
     }
 
     function copyUPI() {
