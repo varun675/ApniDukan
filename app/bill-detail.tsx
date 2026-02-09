@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   Linking,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -76,10 +77,14 @@ export default function BillDetailScreen() {
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
     if (settings.upiId) {
-      const upiLink = generateUPILink(settings.upiId, name, bill.totalAmount);
-      message += `\uD83D\uDCB3 *Pay Online:*\n`;
-      message += `${upiLink}\n\n`;
-      message += `\u261D\uFE0F _Tap the link above to pay *${formatCurrencyShort(bill.totalAmount)}* via GPay/PhonePe/Paytm_\n\n`;
+      message += `\uD83D\uDCB3 *Payment Details:*\n`;
+      message += `\u2022 UPI ID: *${settings.upiId}*\n`;
+      message += `\u2022 Amount: *${formatCurrencyShort(bill.totalAmount)}*\n\n`;
+      message += `\u261D\uFE0F _Pay ${formatCurrencyShort(bill.totalAmount)} to *${settings.upiId}* via GPay / PhonePe / Paytm_\n\n`;
+    }
+
+    if (settings.phoneNumber) {
+      message += `\uD83D\uDCDE Contact: ${settings.phoneNumber}\n\n`;
     }
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
@@ -123,8 +128,10 @@ export default function BillDetailScreen() {
     );
   }
 
-  const upiLink = settings?.upiId
-    ? generateUPILink(settings.upiId, settings.businessName || "Apni Dukan", bill.totalAmount)
+  const hasUploadedQR = !!settings?.qrCodeImage;
+  const hasUpiId = !!settings?.upiId;
+  const upiLink = hasUpiId
+    ? generateUPILink(settings!.upiId, settings!.businessName || "Apni Dukan", bill.totalAmount)
     : "";
 
   return (
@@ -215,33 +222,53 @@ export default function BillDetailScreen() {
           </View>
         </View>
 
-        {settings?.upiId ? (
+        {(hasUploadedQR || hasUpiId) ? (
           <View style={styles.paymentCard}>
             <Text style={styles.paymentTitle}>Payment</Text>
-            <View style={styles.qrContainer}>
-              <QRCode
-                value={upiLink}
-                size={180}
-                color={Colors.text}
-                backgroundColor={Colors.white}
-              />
-            </View>
-            <Text style={styles.qrHint}>Scan QR code to pay {formatCurrencyShort(bill.totalAmount)}</Text>
-            <Text style={styles.upiIdText}>UPI: {settings.upiId}</Text>
 
-            <Pressable
-              style={({ pressed }) => [styles.upiBtn, pressed && { opacity: 0.9 }]}
-              onPress={handleOpenUPI}
-            >
-              <Ionicons name="wallet-outline" size={20} color={Colors.white} />
-              <Text style={styles.upiBtnText}>Pay {formatCurrencyShort(bill.totalAmount)}</Text>
-            </Pressable>
+            {hasUploadedQR ? (
+              <View style={styles.qrImageContainer}>
+                <Image
+                  source={{ uri: settings!.qrCodeImage }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : hasUpiId ? (
+              <View style={styles.qrContainer}>
+                <QRCode
+                  value={upiLink}
+                  size={180}
+                  color={Colors.text}
+                  backgroundColor={Colors.white}
+                />
+              </View>
+            ) : null}
+
+            <Text style={styles.qrHint}>Scan QR code to pay {formatCurrencyShort(bill.totalAmount)}</Text>
+
+            {hasUpiId && (
+              <View style={styles.upiDetailsBox}>
+                <Text style={styles.upiLabel}>UPI ID</Text>
+                <Text style={styles.upiIdText}>{settings!.upiId}</Text>
+              </View>
+            )}
+
+            {hasUpiId && Platform.OS !== "web" && (
+              <Pressable
+                style={({ pressed }) => [styles.upiBtn, pressed && { opacity: 0.9 }]}
+                onPress={handleOpenUPI}
+              >
+                <Ionicons name="wallet-outline" size={20} color={Colors.white} />
+                <Text style={styles.upiBtnText}>Pay {formatCurrencyShort(bill.totalAmount)}</Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           <View style={styles.noUpiCard}>
             <Ionicons name="alert-circle-outline" size={24} color={Colors.warning} />
             <Text style={styles.noUpiText}>
-              Set your UPI ID in Settings to generate payment QR codes and links
+              Upload your payment QR code or set your UPI ID in Settings to enable payment collection
             </Text>
           </View>
         )}
@@ -460,17 +487,46 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  qrImageContainer: {
+    width: "100%",
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: Colors.white,
+    shadowColor: Colors.cardShadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  qrImage: {
+    width: "100%",
+    height: 240,
+  },
   qrHint: {
     fontSize: 13,
     fontFamily: "Nunito_600SemiBold",
     color: Colors.textSecondary,
     marginTop: 12,
   },
-  upiIdText: {
+  upiDetailsBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceElevated,
+  },
+  upiLabel: {
     fontSize: 12,
-    fontFamily: "Nunito_400Regular",
+    fontFamily: "Nunito_600SemiBold",
     color: Colors.textLight,
-    marginTop: 4,
+  },
+  upiIdText: {
+    fontSize: 14,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.primaryDark,
   },
   upiBtn: {
     flexDirection: "row",

@@ -46,6 +46,7 @@ export interface Settings {
   businessName: string;
   phoneNumber: string;
   whatsappGroups: WhatsAppGroup[];
+  qrCodeImage?: string;
 }
 
 export interface DailyAccount {
@@ -172,9 +173,10 @@ export async function getSettings(): Promise<Settings> {
       businessName: parsed.businessName || "",
       phoneNumber: parsed.phoneNumber || "",
       whatsappGroups: parsed.whatsappGroups || [],
+      qrCodeImage: parsed.qrCodeImage || undefined,
     };
   }
-  return { upiId: "", businessName: "", phoneNumber: "", whatsappGroups: [] };
+  return { upiId: "", businessName: "", phoneNumber: "", whatsappGroups: [], qrCodeImage: undefined };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {

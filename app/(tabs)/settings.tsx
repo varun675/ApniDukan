@@ -9,11 +9,13 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { getSettings, saveSettings, Settings, WhatsAppGroup } from "@/lib/storage";
 
@@ -28,6 +30,7 @@ export default function SettingsScreen() {
     businessName: "",
     phoneNumber: "",
     whatsappGroups: [],
+    qrCodeImage: undefined,
   });
   const [newGroupName, setNewGroupName] = useState("");
   const [saved, setSaved] = useState(false);
@@ -41,6 +44,74 @@ export default function SettingsScreen() {
   const loadSettings = async () => {
     const data = await getSettings();
     setSettingsState(data);
+  };
+
+  const handlePickQR = () => {
+    if (Platform.OS === "web") {
+      pickFromGallery();
+      return;
+    }
+    Alert.alert("Upload QR Code", "Choose how to add your payment QR code", [
+      {
+        text: "Take Photo",
+        onPress: takePhoto,
+      },
+      {
+        text: "Choose from Gallery",
+        onPress: pickFromGallery,
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Needed", "Please allow camera access to take a photo of your QR code.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setSettingsState({ ...settings, qrCodeImage: result.assets[0].uri });
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Needed", "Please allow gallery access to select your QR code image.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setSettingsState({ ...settings, qrCodeImage: result.assets[0].uri });
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const handleRemoveQR = () => {
+    Alert.alert("Remove QR Code", "Are you sure you want to remove your payment QR code?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          setSettingsState({ ...settings, qrCodeImage: undefined });
+          if (Platform.OS !== "web") Haptics.selectionAsync();
+        },
+      },
+    ]);
   };
 
   const handleAddGroup = () => {
@@ -139,8 +210,52 @@ export default function SettingsScreen() {
                 onChangeText={(t) => setSettingsState({ ...settings, upiId: t })}
               />
               <Text style={styles.inputHint}>
-                Used for QR codes and payment links in bills
+                Used in bill payment details sent via WhatsApp
               </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Payment QR Code</Text>
+              <Text style={styles.inputHint}>
+                Upload your GPay / PhonePe / Paytm QR code image. This will be shown in bills.
+              </Text>
+
+              {settings.qrCodeImage ? (
+                <View style={styles.qrPreviewContainer}>
+                  <Image
+                    source={{ uri: settings.qrCodeImage }}
+                    style={styles.qrPreviewImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.qrPreviewActions}>
+                    <Pressable
+                      onPress={handlePickQR}
+                      style={styles.qrChangeBtn}
+                    >
+                      <Ionicons name="camera-outline" size={18} color={Colors.primary} />
+                      <Text style={styles.qrChangeBtnText}>Change</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={handleRemoveQR}
+                      style={styles.qrRemoveBtn}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                      <Text style={styles.qrRemoveBtnText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handlePickQR}
+                  style={styles.qrUploadBox}
+                >
+                  <View style={styles.qrUploadIconCircle}>
+                    <Ionicons name="qr-code-outline" size={32} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.qrUploadText}>Tap to upload QR code</Text>
+                  <Text style={styles.qrUploadSubtext}>Take a photo or choose from gallery</Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -172,7 +287,7 @@ export default function SettingsScreen() {
 
             {settings.whatsappGroups.length > 0 ? (
               <View style={styles.groupList}>
-                {settings.whatsappGroups.map((group, idx) => (
+                {settings.whatsappGroups.map((group) => (
                   <View key={group.id} style={styles.groupItem}>
                     <View style={styles.groupItemLeft}>
                       <View style={styles.groupIcon}>
@@ -294,6 +409,86 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginTop: 6,
     paddingHorizontal: 4,
+  },
+  qrUploadBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 28,
+    marginTop: 10,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: Colors.primary + "40",
+    backgroundColor: Colors.primary + "06",
+  },
+  qrUploadIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.primary + "15",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  qrUploadText: {
+    fontSize: 15,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.primary,
+  },
+  qrUploadSubtext: {
+    fontSize: 12,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    marginTop: 4,
+  },
+  qrPreviewContainer: {
+    marginTop: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  qrPreviewImage: {
+    width: "100%",
+    height: 240,
+    backgroundColor: Colors.white,
+  },
+  qrPreviewActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  qrChangeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + "12",
+  },
+  qrChangeBtnText: {
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.primary,
+  },
+  qrRemoveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.error + "10",
+  },
+  qrRemoveBtnText: {
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.error,
   },
   addGroupRow: {
     flexDirection: "row",
