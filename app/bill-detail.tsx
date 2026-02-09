@@ -9,11 +9,14 @@ import {
   Platform,
   Linking,
   Image,
+  Share,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import QRCode from "react-native-qrcode-svg";
 import Colors from "@/constants/colors";
 import {
@@ -99,6 +102,32 @@ export default function BillDetailScreen() {
     }
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
+
+    if (settings.qrCodeImage && Platform.OS !== "web") {
+      try {
+        let fileUri = "";
+        if (settings.qrCodeImage.startsWith("data:")) {
+          const base64Data = settings.qrCodeImage.split(",")[1];
+          const qrFile = new File(Paths.cache, "payment_qr.jpg");
+          const bytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+          const writer = qrFile.writableStream().getWriter();
+          await writer.write(bytes);
+          await writer.close();
+          fileUri = qrFile.uri;
+        } else {
+          fileUri = settings.qrCodeImage;
+        }
+
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "image/jpeg",
+            dialogTitle: message,
+          });
+          return;
+        }
+      } catch {}
+    }
 
     const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(whatsappUrl);

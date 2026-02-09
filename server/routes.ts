@@ -292,17 +292,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       badge.className = 'status redirecting';
       badge.textContent = 'Opening your UPI app...';
       setTimeout(function() {
-        tryOpen(upiLink);
+        tryOpen("phonepe://pay?${upiParams}");
       }, 300);
+      setTimeout(function() {
+        tryOpen("gpay://upi/pay?${upiParams}");
+      }, 1200);
+      setTimeout(function() {
+        tryOpen(upiLink);
+      }, 2100);
       if (isAndroid) {
         setTimeout(function() {
           tryOpen(intentLink);
-        }, 1500);
+        }, 3000);
       }
       setTimeout(function() {
         badge.className = 'status';
         badge.textContent = 'Tap a button below to pay';
-      }, 3000);
+      }, 4000);
     } else {
       badge.className = 'status';
       badge.textContent = 'Choose a payment app below';
