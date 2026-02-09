@@ -100,7 +100,40 @@ export async function reorderItems(newItems: Item[]): Promise<void> {
 
 export async function getBills(): Promise<Bill[]> {
   const data = await AsyncStorage.getItem(KEYS.BILLS);
-  return data ? JSON.parse(data) : [];
+  if (!data) return [];
+  const bills: Bill[] = JSON.parse(data);
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const filtered = bills.filter((b) => new Date(b.createdAt).getTime() > oneWeekAgo);
+  if (filtered.length !== bills.length) {
+    await AsyncStorage.setItem(KEYS.BILLS, JSON.stringify(filtered));
+  }
+  return filtered;
+}
+
+export function groupBillsByDate(bills: Bill[]): { date: string; dateLabel: string; bills: Bill[] }[] {
+  const groups = new Map<string, Bill[]>();
+  bills.forEach((bill) => {
+    const dateKey = new Date(bill.createdAt).toISOString().split("T")[0];
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, []);
+    }
+    groups.get(dateKey)!.push(bill);
+  });
+  const sorted = Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  return sorted.map(([date, dateBills]) => {
+    let dateLabel: string;
+    if (date === today) {
+      dateLabel = "Today";
+    } else if (date === yesterday) {
+      dateLabel = "Yesterday";
+    } else {
+      const d = new Date(date + "T00:00:00");
+      dateLabel = d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+    }
+    return { date, dateLabel, bills: dateBills };
+  });
 }
 
 export async function saveBill(bill: Omit<Bill, "id" | "createdAt">): Promise<Bill> {
