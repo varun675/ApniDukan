@@ -13,10 +13,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const upiId = String(pa);
     const name = pn ? String(pn) : "Shop";
     const amount = String(am);
+    const tn = `Payment to ${name}`;
 
-    const upiParams = `pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
+    const upiParams = `pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount}&cu=INR`;
     const upiLink = `upi://pay?${upiParams}`;
-    const intentLink = `intent://pay?${upiParams}#Intent;scheme=upi;end`;
+    const intentLink = `intent://pay?${upiParams}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -225,21 +226,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </a>
 
     <div class="apps-grid">
-      <a href="phonepe://pay?${upiParams}" class="app-btn">
+      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
         <div class="app-icon phonepe">P</div>
         PhonePe
       </a>
-      <a href="gpay://upi/pay?${upiParams}" class="app-btn">
+      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
         <div class="app-icon gpay">G</div>
         GPay
       </a>
-      <a href="paytmmp://pay?${upiParams}" class="app-btn">
+      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
         <div class="app-icon paytm">P</div>
         Paytm
       </a>
-      <a href="whatsapp://pay?${upiParams}" class="app-btn">
+      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
         <div class="app-icon whatsapp">W</div>
-        WA Pay
+        UPI App
       </a>
     </div>
 
@@ -292,23 +293,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       badge.className = 'status redirecting';
       badge.textContent = 'Opening your UPI app...';
       setTimeout(function() {
-        tryOpen("phonepe://pay?${upiParams}");
-      }, 300);
-      setTimeout(function() {
-        tryOpen("gpay://upi/pay?${upiParams}");
-      }, 1200);
-      setTimeout(function() {
         tryOpen(upiLink);
-      }, 2100);
+      }, 500);
       if (isAndroid) {
         setTimeout(function() {
           tryOpen(intentLink);
-        }, 3000);
+        }, 2000);
       }
       setTimeout(function() {
         badge.className = 'status';
         badge.textContent = 'Tap a button below to pay';
-      }, 4000);
+      }, 3500);
     } else {
       badge.className = 'status';
       badge.textContent = 'Choose a payment app below';
