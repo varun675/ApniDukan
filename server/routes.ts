@@ -12,10 +12,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const upiId = String(pa);
     const name = pn ? String(pn) : "Shop";
-    const amount = String(am);
-    const tn = `Payment to ${name}`;
+    const amount = parseFloat(String(am)).toString();
 
-    const safeName = name.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const safeName = name.replace(/[^a-zA-Z0-9]/g, '').trim() || "Shop";
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -260,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     var isAndroid = /android/i.test(navigator.userAgent);
 
     function buildUpiParams() {
-      return "pa=" + pa + "&pn=" + payeeName + "&am=" + amt + "&cu=INR";
+      return "pa=" + pa + "&pn=" + payeeName + "&am=" + amt;
     }
 
     function openApp(app) {
