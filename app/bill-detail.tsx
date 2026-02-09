@@ -109,13 +109,15 @@ export default function BillDetailScreen() {
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
 
-    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    const canOpen = await Linking.canOpenURL(whatsappUrl);
-    if (canOpen) {
-      await Linking.openURL(whatsappUrl);
-    } else {
-      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
-    }
+    const openWhatsAppWithText = async () => {
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+      const canOpen = await Linking.canOpenURL(whatsappUrl);
+      if (canOpen) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+      }
+    };
 
     if (settings.qrCodeImage && Platform.OS !== "web") {
       try {
@@ -134,17 +136,17 @@ export default function BillDetailScreen() {
 
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          setTimeout(async () => {
-            try {
-              await Sharing.shareAsync(fileUri, {
-                mimeType: "image/jpeg",
-                dialogTitle: "Share Payment QR Code",
-              });
-            } catch {}
-          }, 1500);
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "image/jpeg",
+            dialogTitle: "Share Payment QR Code to WhatsApp",
+          });
+          setTimeout(() => { openWhatsAppWithText(); }, 500);
+          return;
         }
       } catch {}
     }
+
+    await openWhatsAppWithText();
   };
 
   const handleOpenUPI = async () => {
