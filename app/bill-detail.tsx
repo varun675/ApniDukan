@@ -59,9 +59,13 @@ export default function BillDetailScreen() {
 
     const name = settings.businessName || "Apni Dukan";
 
-    let payPageLink = "";
-    if (settings.upiId) {
-      payPageLink = generatePaymentPageUrl(settings.upiId, name, bill.totalAmount);
+    let phonepeLink = "";
+    let gpayLink = "";
+    if (settings.phonepeUpiId) {
+      phonepeLink = generatePaymentPageUrl(settings.phonepeUpiId, name, bill.totalAmount, "phonepe");
+    }
+    if (settings.gpayUpiId) {
+      gpayLink = generatePaymentPageUrl(settings.gpayUpiId, name, bill.totalAmount, "gpay");
     }
 
     let message = `\uD83D\uDCCB *Bill from ${name}*\n\n`;
@@ -83,17 +87,23 @@ export default function BillDetailScreen() {
     message += `${"━".repeat(28)}\n`;
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
-    if (settings.paymentLink || payPageLink || settings.upiId) {
+    const hasPaymentOptions = phonepeLink || gpayLink || settings.paymentLink || settings.upiId;
+    if (hasPaymentOptions) {
       message += `\uD83D\uDCB3 *Pay Now:* ${formatCurrencyShort(bill.totalAmount)}\n\n`;
 
-      if (settings.paymentLink) {
-        message += `\u261D\uFE0F *Tap to pay:*\n`;
-        message += `${settings.paymentLink}\n\n`;
+      if (phonepeLink) {
+        message += `\u261D\uFE0F *Pay via PhonePe:*\n`;
+        message += `${phonepeLink}\n\n`;
       }
 
-      if (payPageLink) {
-        message += `\u261D\uFE0F *Pay via UPI:*\n`;
-        message += `${payPageLink}\n\n`;
+      if (gpayLink) {
+        message += `\u261D\uFE0F *Pay via Google Pay:*\n`;
+        message += `${gpayLink}\n\n`;
+      }
+
+      if (settings.paymentLink) {
+        message += `\u261D\uFE0F *Pay directly:*\n`;
+        message += `${settings.paymentLink}\n\n`;
       }
 
       if (settings.upiId) {
@@ -117,11 +127,12 @@ export default function BillDetailScreen() {
   };
 
   const handleOpenUPI = async () => {
-    if (!bill || !settings?.upiId) {
+    const upiIdToUse = settings?.phonepeUpiId || settings?.gpayUpiId || settings?.upiId;
+    if (!bill || !upiIdToUse) {
       Alert.alert("No UPI ID", "Please set your UPI ID in Settings first.");
       return;
     }
-    const upiLink = generateUPILink(settings.upiId, settings.businessName || "Apni Dukan", bill.totalAmount);
+    const upiLink = generateUPILink(upiIdToUse, settings?.businessName || "Apni Dukan", bill.totalAmount);
     try {
       await Linking.openURL(upiLink);
     } catch {
@@ -147,9 +158,10 @@ export default function BillDetailScreen() {
   }
 
   const hasUploadedQR = !!settings?.qrCodeImage;
-  const hasUpiId = !!settings?.upiId;
+  const primaryUpiId = settings?.phonepeUpiId || settings?.gpayUpiId || settings?.upiId || "";
+  const hasUpiId = !!primaryUpiId;
   const upiLink = hasUpiId
-    ? generateUPILink(settings!.upiId, settings!.businessName || "Apni Dukan", bill.totalAmount)
+    ? generateUPILink(primaryUpiId, settings?.businessName || "Apni Dukan", bill.totalAmount)
     : "";
 
   return (
@@ -268,7 +280,7 @@ export default function BillDetailScreen() {
             {hasUpiId && (
               <View style={styles.upiDetailsBox}>
                 <Text style={styles.upiLabel}>UPI ID</Text>
-                <Text style={styles.upiIdText}>{settings!.upiId}</Text>
+                <Text style={styles.upiIdText}>{primaryUpiId}</Text>
               </View>
             )}
 

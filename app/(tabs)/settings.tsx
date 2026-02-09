@@ -200,34 +200,47 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>UPI ID</Text>
+              <Text style={styles.inputLabel}>PhonePe UPI ID</Text>
               <TextInput
                 style={styles.input}
-                placeholder="yourname@paytm or phone@gpay"
+                placeholder="yourname@ybl or phone@ibl"
+                placeholderTextColor={Colors.textLight}
+                autoCapitalize="none"
+                value={settings.phonepeUpiId || ""}
+                onChangeText={(t) => setSettingsState({ ...settings, phonepeUpiId: t || undefined })}
+              />
+              <Text style={styles.inputHint}>
+                Customers can tap a link in WhatsApp to pay via PhonePe
+              </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Google Pay UPI ID</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="yourname@okaxis or phone@okhdfcbank"
+                placeholderTextColor={Colors.textLight}
+                autoCapitalize="none"
+                value={settings.gpayUpiId || ""}
+                onChangeText={(t) => setSettingsState({ ...settings, gpayUpiId: t || undefined })}
+              />
+              <Text style={styles.inputHint}>
+                Customers can tap a link in WhatsApp to pay via Google Pay
+              </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>UPI ID (General)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="yourname@paytm or any UPI ID"
                 placeholderTextColor={Colors.textLight}
                 autoCapitalize="none"
                 value={settings.upiId}
                 onChangeText={(t) => setSettingsState({ ...settings, upiId: t })}
               />
               <Text style={styles.inputHint}>
-                Shown in bills so customers can pay manually
-              </Text>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Payment Link (for WhatsApp)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="https://phon.pe/abc or https://paytm.me/xyz"
-                placeholderTextColor={Colors.textLight}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                value={settings.paymentLink || ""}
-                onChangeText={(t) => setSettingsState({ ...settings, paymentLink: t || undefined })}
-              />
-              <Text style={styles.inputHint}>
-                Paste your PhonePe / GPay / Paytm payment link here. Customers can tap this link in WhatsApp to pay you directly (works on both Android and iPhone)
+                Shown in bills for manual payment (copy & pay)
               </Text>
             </View>
 

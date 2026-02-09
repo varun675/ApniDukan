@@ -43,6 +43,8 @@ export interface WhatsAppGroup {
 
 export interface Settings {
   upiId: string;
+  phonepeUpiId?: string;
+  gpayUpiId?: string;
   businessName: string;
   phoneNumber: string;
   whatsappGroups: WhatsAppGroup[];
@@ -171,6 +173,8 @@ export async function getSettings(): Promise<Settings> {
     const parsed = JSON.parse(data);
     return {
       upiId: parsed.upiId || "",
+      phonepeUpiId: parsed.phonepeUpiId || undefined,
+      gpayUpiId: parsed.gpayUpiId || undefined,
       businessName: parsed.businessName || "",
       phoneNumber: parsed.phoneNumber || "",
       whatsappGroups: parsed.whatsappGroups || [],
@@ -246,11 +250,15 @@ export function generateUPILink(upiId: string, name: string, amount: number): st
   return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}&cu=INR`;
 }
 
-export function generatePaymentPageUrl(upiId: string, name: string, amount: number): string {
+export function generatePaymentPageUrl(upiId: string, name: string, amount: number, app?: string): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   if (!domain) return "";
   const baseUrl = `https://${domain}`;
-  return `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
+  let url = `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
+  if (app) {
+    url += `&app=${app}`;
+  }
+  return url;
 }
 
 export function generateWhatsAppMessage(

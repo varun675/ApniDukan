@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/pay", (req: Request, res: Response) => {
-    const { pa, pn, am } = req.query;
+    const { pa, pn, am, app: appName } = req.query;
 
     if (!pa || !am) {
       res.status(400).send("Invalid payment link");
@@ -13,7 +13,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const upiId = String(pa);
     const name = pn ? String(pn) : "Shop";
     const amount = String(am);
+    const targetApp = appName ? String(appName) : "";
     const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
+
+    let primaryLink = upiLink;
+    let appLabel = "UPI App";
+    if (targetApp === "phonepe") {
+      primaryLink = `phonepe://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
+      appLabel = "PhonePe";
+    } else if (targetApp === "gpay") {
+      primaryLink = `tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
+      appLabel = "Google Pay";
+    }
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -135,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div class="upi-id">${name}</div>
     <div class="amount">\u20B9${amount}</div>
 
-    <a href="${upiLink}" class="pay-btn" id="payBtn">Open UPI App & Pay</a>
+    <a href="${primaryLink}" class="pay-btn" id="payBtn">Open ${appLabel} & Pay</a>
 
     <div class="apps">
       <a href="gpay://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR" class="app-btn">Google Pay</a>
@@ -153,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   <script>
     setTimeout(function() {
-      window.location.href = "${upiLink}";
+      window.location.href = "${primaryLink}";
     }, 500);
   </script>
 </body>
