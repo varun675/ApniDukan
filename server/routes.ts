@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/pay", (req: Request, res: Response) => {
-    const { pa, pn, am } = req.query;
+    const { pa, pn, am, tn } = req.query;
 
     if (!pa || !am) {
       res.status(400).send("Invalid payment link");
@@ -13,6 +13,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const upiId = String(pa);
     const name = pn ? String(pn) : "Shop";
     const amount = parseFloat(String(am)).toString();
+    const txnNote = tn ? String(tn).replace(/[^a-zA-Z0-9 ,.\-\/]/g, '').substring(0, 50) : "";
 
     const safeName = name.replace(/[^a-zA-Z0-9]/g, '').trim() || "Shop";
 
@@ -258,8 +259,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     var amt = "${amount}";
     var isAndroid = /android/i.test(navigator.userAgent);
 
+    var txnNote = "${txnNote}";
+
     function buildUpiParams() {
-      return "pa=" + pa + "&pn=" + payeeName + "&am=" + amt;
+      var params = "pa=" + pa + "&pn=" + payeeName + "&am=" + amt;
+      if (txnNote) { params += "&tn=" + txnNote; }
+      return params;
     }
 
     function openApp(app) {

@@ -63,9 +63,14 @@ export default function BillDetailScreen() {
     const name = settings.businessName || "Apni Dukan";
 
     const payUpiId = settings.phonepeUpiId || settings.gpayUpiId || settings.upiId || "";
-    const payLink = payUpiId ? generatePaymentPageUrl(payUpiId, name, bill.totalAmount) : "";
+    const billDate = new Date(bill.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const txnNote = `Bill ${bill.billNumber || ""} ${bill.flatNumber} ${billDate}`.trim();
+    const payLink = payUpiId ? generatePaymentPageUrl(payUpiId, name, bill.totalAmount, txnNote) : "";
 
     let message = `\uD83D\uDCCB *Bill from ${name}*\n\n`;
+    if (bill.billNumber) {
+      message += `\uD83D\uDCDD *Bill No:* ${bill.billNumber}\n`;
+    }
     message += `\uD83D\uDC64 *Customer:* ${bill.customerName}\n`;
     message += `\uD83C\uDFE0 *Flat:* ${bill.flatNumber}\n`;
     message += `\uD83D\uDCC5 *Date:* ${new Date(bill.createdAt).toLocaleDateString("en-IN", {
@@ -155,7 +160,9 @@ export default function BillDetailScreen() {
       Alert.alert("No UPI ID", "Please set your UPI ID in Settings first.");
       return;
     }
-    const upiLink = generateUPILink(upiIdToUse, settings?.businessName || "Apni Dukan", bill.totalAmount);
+    const bDate = new Date(bill.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const note = `Bill ${bill.billNumber || ""} ${bill.flatNumber} ${bDate}`.trim();
+    const upiLink = generateUPILink(upiIdToUse, settings?.businessName || "Apni Dukan", bill.totalAmount, note);
     try {
       await Linking.openURL(upiLink);
     } catch {
@@ -183,8 +190,10 @@ export default function BillDetailScreen() {
   const hasUploadedQR = !!settings?.qrCodeImage;
   const primaryUpiId = settings?.phonepeUpiId || settings?.gpayUpiId || settings?.upiId || "";
   const hasUpiId = !!primaryUpiId;
+  const billDate = new Date(bill.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const txnNote = `Bill ${bill.billNumber || ""} ${bill.flatNumber} ${billDate}`.trim();
   const upiLink = hasUpiId
-    ? generateUPILink(primaryUpiId, settings?.businessName || "Apni Dukan", bill.totalAmount)
+    ? generateUPILink(primaryUpiId, settings?.businessName || "Apni Dukan", bill.totalAmount, txnNote)
     : "";
 
   return (
@@ -222,6 +231,13 @@ export default function BillDetailScreen() {
           </View>
 
           <View style={styles.divider} />
+
+          {bill.billNumber && (
+            <View style={styles.billNumberRow}>
+              <Text style={styles.billNumberLabel}>Bill No.</Text>
+              <Text style={styles.billNumberValue}>{bill.billNumber}</Text>
+            </View>
+          )}
 
           <View style={styles.customerRow}>
             <View style={styles.customerDetail}>
@@ -426,6 +442,26 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.borderLight,
     marginVertical: 16,
+  },
+  billNumberRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.primary + "08",
+    borderRadius: 8,
+  },
+  billNumberLabel: {
+    fontSize: 12,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.textLight,
+    marginRight: 8,
+  },
+  billNumberValue: {
+    fontSize: 14,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.primaryDark,
   },
   customerRow: {
     flexDirection: "row",

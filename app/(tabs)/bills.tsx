@@ -102,7 +102,7 @@ export default function BillsScreen() {
             {item.customerName}
           </Text>
           <Text style={styles.billFlat}>
-            Flat: {item.flatNumber} | {formatTime(item.createdAt)}
+            {item.billNumber ? `#${item.billNumber} | ` : ""}Flat: {item.flatNumber} | {formatTime(item.createdAt)}
           </Text>
         </View>
         <View style={styles.billRight}>
