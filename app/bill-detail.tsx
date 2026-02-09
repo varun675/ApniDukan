@@ -23,7 +23,7 @@ import {
   formatCurrencyShort,
   getPricingLabel,
   generateUPILink,
-  shortenUPILink,
+  generatePaymentPageUrl,
   Bill,
   Settings,
 } from "@/lib/storage";
@@ -59,10 +59,9 @@ export default function BillDetailScreen() {
 
     const name = settings.businessName || "Apni Dukan";
 
-    let shortPayLink = "";
+    let payPageLink = "";
     if (settings.upiId) {
-      const upiPayLink = generateUPILink(settings.upiId, name, bill.totalAmount);
-      shortPayLink = await shortenUPILink(upiPayLink);
+      payPageLink = generatePaymentPageUrl(settings.upiId, name, bill.totalAmount);
     }
 
     let message = `\uD83D\uDCCB *Bill from ${name}*\n\n`;
@@ -84,7 +83,7 @@ export default function BillDetailScreen() {
     message += `${"━".repeat(28)}\n`;
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
-    if (settings.paymentLink || shortPayLink || settings.upiId) {
+    if (settings.paymentLink || payPageLink || settings.upiId) {
       message += `\uD83D\uDCB3 *Pay Now:* ${formatCurrencyShort(bill.totalAmount)}\n\n`;
 
       if (settings.paymentLink) {
@@ -92,9 +91,9 @@ export default function BillDetailScreen() {
         message += `${settings.paymentLink}\n\n`;
       }
 
-      if (shortPayLink && shortPayLink.startsWith("https://")) {
+      if (payPageLink) {
         message += `\u261D\uFE0F *Pay via UPI:*\n`;
-        message += `${shortPayLink}\n\n`;
+        message += `${payPageLink}\n\n`;
       }
 
       if (settings.upiId) {
