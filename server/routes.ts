@@ -17,7 +17,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const upiParams = `pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount}&cu=INR`;
     const upiLink = `upi://pay?${upiParams}`;
-    const intentLink = `intent://pay?${upiParams}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -128,45 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       height: 22px;
       fill: white;
     }
-    .apps-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 20px;
+    .pay-hint {
+      font-size: 13px;
+      color: #888;
+      margin-top: 12px;
+      line-height: 1.5;
     }
-    .app-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 14px 4px;
-      border-radius: 14px;
-      border: 1.5px solid #f0f0f0;
-      background: #fafafa;
-      text-decoration: none;
-      color: #333;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .app-btn:active { background: #f0f0f0; border-color: #ddd; }
-    .app-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 700;
-      color: white;
-    }
-    .app-icon.phonepe { background: #5F259F; }
-    .app-icon.gpay { background: #4285F4; }
-    .app-icon.paytm { background: #00BAF2; }
-    .app-icon.whatsapp { background: #25D366; }
     .manual {
       margin-top: 20px;
       padding: 16px;
@@ -225,24 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Pay ₹${amount}
     </a>
 
-    <div class="apps-grid">
-      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
-        <div class="app-icon phonepe">P</div>
-        PhonePe
-      </a>
-      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
-        <div class="app-icon gpay">G</div>
-        GPay
-      </a>
-      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
-        <div class="app-icon paytm">P</div>
-        Paytm
-      </a>
-      <a href="${upiLink}" class="app-btn" onclick="event.preventDefault();tryOpen('${upiLink}')">
-        <div class="app-icon whatsapp">W</div>
-        UPI App
-      </a>
-    </div>
+    <div class="pay-hint">Tap the button above to choose your UPI app<br>(PhonePe, GPay, Paytm, etc.)</div>
 
     <div class="manual">
       <div class="manual-label">Or pay using UPI ID</div>
@@ -256,14 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
 
   <script>
-    var upiLink = "${upiLink}";
-    var intentLink = "${intentLink}";
     var badge = document.getElementById('statusBadge');
-
-    function tryOpen(url) {
-      var w = window.open(url, '_self');
-      if (!w) window.location.href = url;
-    }
 
     function copyUPI() {
       var id = "${upiId}";
@@ -286,28 +228,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    var isAndroid = /android/i.test(navigator.userAgent);
-    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-    if (isAndroid || isIOS) {
-      badge.className = 'status redirecting';
-      badge.textContent = 'Opening your UPI app...';
-      setTimeout(function() {
-        tryOpen(upiLink);
-      }, 500);
-      if (isAndroid) {
-        setTimeout(function() {
-          tryOpen(intentLink);
-        }, 2000);
-      }
-      setTimeout(function() {
-        badge.className = 'status';
-        badge.textContent = 'Tap a button below to pay';
-      }, 3500);
-    } else {
-      badge.className = 'status';
-      badge.textContent = 'Choose a payment app below';
-    }
+    badge.className = 'status';
+    badge.textContent = 'Tap the Pay button to proceed';
   </script>
 </body>
 </html>`;
