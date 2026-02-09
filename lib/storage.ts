@@ -250,15 +250,11 @@ export function generateUPILink(upiId: string, name: string, amount: number): st
   return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}&cu=INR`;
 }
 
-export function generatePaymentPageUrl(upiId: string, name: string, amount: number, app?: string): string {
+export function generatePaymentPageUrl(upiId: string, name: string, amount: number): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   if (!domain) return "";
   const baseUrl = `https://${domain}`;
-  let url = `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
-  if (app) {
-    url += `&app=${app}`;
-  }
-  return url;
+  return `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
 }
 
 export function generateWhatsAppMessage(
