@@ -85,7 +85,9 @@ export default function ItemsScreen() {
       items,
       settings?.businessName || "",
       flashSale,
-      flashDuration
+      flashDuration,
+      settings?.phoneNumber || undefined,
+      settings?.shopAddress || undefined,
     );
 
     const groups = settings?.whatsappGroups || [];
@@ -112,7 +114,9 @@ export default function ItemsScreen() {
       items,
       settings?.businessName || "",
       flashSale,
-      flashDuration
+      flashDuration,
+      settings?.phoneNumber || undefined,
+      settings?.shopAddress || undefined,
     );
     openWhatsApp(message);
   };

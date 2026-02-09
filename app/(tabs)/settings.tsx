@@ -17,11 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
-import { getSettings, saveSettings, Settings, WhatsAppGroup } from "@/lib/storage";
-
-function generateId(): string {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-}
+import { getSettings, saveSettings, Settings } from "@/lib/storage";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -32,7 +28,6 @@ export default function SettingsScreen() {
     whatsappGroups: [],
     qrCodeImage: undefined,
   });
-  const [newGroupName, setNewGroupName] = useState("");
   const [saved, setSaved] = useState(false);
 
   useFocusEffect(
@@ -114,28 +109,6 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const handleAddGroup = () => {
-    if (!newGroupName.trim()) return;
-    const newGroup: WhatsAppGroup = {
-      id: generateId(),
-      name: newGroupName.trim(),
-    };
-    setSettingsState({
-      ...settings,
-      whatsappGroups: [...settings.whatsappGroups, newGroup],
-    });
-    setNewGroupName("");
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handleDeleteGroup = (id: string) => {
-    setSettingsState({
-      ...settings,
-      whatsappGroups: settings.whatsappGroups.filter((g) => g.id !== id),
-    });
-    if (Platform.OS !== "web") Haptics.selectionAsync();
-  };
-
   const handleSave = async () => {
     await saveSettings(settings);
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -190,6 +163,22 @@ export default function SettingsScreen() {
                 value={settings.phoneNumber}
                 onChangeText={(t) => setSettingsState({ ...settings, phoneNumber: t })}
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Shop Address</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                placeholder="e.g. Shop 5, Main Market, Sector 21"
+                placeholderTextColor={Colors.textLight}
+                multiline
+                numberOfLines={2}
+                value={settings.shopAddress || ""}
+                onChangeText={(t) => setSettingsState({ ...settings, shopAddress: t || undefined })}
+              />
+              <Text style={styles.inputHint}>
+                Shown in price lists and bills sent via WhatsApp
+              </Text>
             </View>
           </View>
 
@@ -289,57 +278,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="logo-whatsapp" size={20} color={Colors.whatsapp} />
-              <Text style={styles.sectionTitle}>WhatsApp Groups</Text>
-            </View>
-            <Text style={styles.sectionDesc}>
-              Save group names here so you can quickly share your price list to multiple groups
-            </Text>
-
-            <View style={styles.addGroupRow}>
-              <TextInput
-                style={[styles.input, styles.addGroupInput]}
-                placeholder="Group name"
-                placeholderTextColor={Colors.textLight}
-                value={newGroupName}
-                onChangeText={setNewGroupName}
-                onSubmitEditing={handleAddGroup}
-              />
-              <Pressable
-                onPress={handleAddGroup}
-                style={[styles.addGroupBtn, !newGroupName.trim() && styles.addGroupBtnDisabled]}
-              >
-                <Ionicons name="add" size={20} color={Colors.white} />
-              </Pressable>
-            </View>
-
-            {settings.whatsappGroups.length > 0 ? (
-              <View style={styles.groupList}>
-                {settings.whatsappGroups.map((group) => (
-                  <View key={group.id} style={styles.groupItem}>
-                    <View style={styles.groupItemLeft}>
-                      <View style={styles.groupIcon}>
-                        <Ionicons name="people" size={16} color={Colors.whatsapp} />
-                      </View>
-                      <Text style={styles.groupName}>{group.name}</Text>
-                    </View>
-                    <Pressable onPress={() => handleDeleteGroup(group.id)} hitSlop={8}>
-                      <Ionicons name="close-circle" size={22} color={Colors.error + "80"} />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.noGroupsBox}>
-                <Text style={styles.noGroupsText}>
-                  No groups added yet. Add your WhatsApp group names above.
-                </Text>
-              </View>
-            )}
-          </View>
-
           <Pressable
             style={({ pressed }) => [
               styles.saveBtn,
@@ -433,6 +371,11 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito_400Regular",
     color: Colors.text,
   },
+  multilineInput: {
+    height: 72,
+    paddingTop: 14,
+    textAlignVertical: "top",
+  },
   inputHint: {
     fontSize: 12,
     fontFamily: "Nunito_400Regular",
@@ -519,64 +462,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Nunito_600SemiBold",
     color: Colors.error,
-  },
-  addGroupRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  addGroupInput: {
-    flex: 1,
-  },
-  addGroupBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: Colors.whatsapp,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addGroupBtnDisabled: {
-    opacity: 0.5,
-  },
-  groupList: {
-    marginTop: 12,
-    gap: 6,
-  },
-  groupItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  groupItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  groupIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.whatsapp + "12",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  groupName: {
-    fontSize: 15,
-    fontFamily: "Nunito_600SemiBold",
-    color: Colors.text,
-  },
-  noGroupsBox: {
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceElevated,
   },
   noGroupsText: {
     fontSize: 13,

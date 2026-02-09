@@ -47,6 +47,7 @@ export interface Settings {
   gpayUpiId?: string;
   businessName: string;
   phoneNumber: string;
+  shopAddress?: string;
   whatsappGroups: WhatsAppGroup[];
   qrCodeImage?: string;
   paymentLink?: string;
@@ -177,6 +178,7 @@ export async function getSettings(): Promise<Settings> {
       gpayUpiId: parsed.gpayUpiId || undefined,
       businessName: parsed.businessName || "",
       phoneNumber: parsed.phoneNumber || "",
+      shopAddress: parsed.shopAddress || undefined,
       whatsappGroups: parsed.whatsappGroups || [],
       qrCodeImage: parsed.qrCodeImage || undefined,
       paymentLink: parsed.paymentLink || undefined,
@@ -262,6 +264,8 @@ export function generateWhatsAppMessage(
   businessName: string,
   flashSale: boolean,
   flashDuration: number,
+  phoneNumber?: string,
+  shopAddress?: string,
 ): string {
   const name = businessName || "Apni Dukan";
   const today = new Date();
@@ -310,7 +314,17 @@ export function generateWhatsAppMessage(
     msg += `\u26A1 _Hurry! Limited time offer!_ \u26A1\n\n`;
   }
 
-  msg += `\uD83D\uDCDE _Order now! Contact us for delivery_\n`;
+  if (shopAddress) {
+    msg += `\uD83D\uDCCD *Address:* ${shopAddress}\n`;
+  }
+  if (phoneNumber) {
+    msg += `\uD83D\uDCDE *Contact:* ${phoneNumber}\n`;
+  }
+  if (shopAddress || phoneNumber) {
+    msg += `\n`;
+  }
+
+  msg += `\uD83D\uDED2 _Order now! Contact us for delivery_\n`;
   msg += `\n_Sent via ${name}_`;
 
   return msg;

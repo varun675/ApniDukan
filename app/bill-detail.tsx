@@ -97,8 +97,14 @@ export default function BillDetailScreen() {
       }
     }
 
+    if (settings.shopAddress) {
+      message += `\n\uD83D\uDCCD *Address:* ${settings.shopAddress}\n`;
+    }
     if (settings.phoneNumber) {
-      message += `\n\uD83D\uDCDE Contact: ${settings.phoneNumber}\n\n`;
+      message += `\uD83D\uDCDE *Contact:* ${settings.phoneNumber}\n`;
+    }
+    if (settings.shopAddress || settings.phoneNumber) {
+      message += `\n`;
     }
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
