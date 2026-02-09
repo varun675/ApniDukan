@@ -263,7 +263,7 @@ export function generateUPILink(upiId: string, name: string, amount: number, not
   let link = `upi://pay?pa=${upiId}&pn=${safeName}&am=${amount}`;
   if (note) {
     const safeNote = note.replace(/[^a-zA-Z0-9 ,.\-\/]/g, '').substring(0, 50);
-    link += `&tn=${safeNote}`;
+    link += `&tn=${encodeURIComponent(safeNote)}`;
   }
   return link;
 }

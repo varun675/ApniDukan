@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     function buildUpiParams() {
       var params = "pa=" + pa + "&pn=" + payeeName + "&am=" + amt;
-      if (txnNote) { params += "&tn=" + txnNote; }
+      if (txnNote) { params += "&tn=" + encodeURIComponent(txnNote); }
       return params;
     }
 
