@@ -10,22 +10,20 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { saveItem, updateItem, getItems, Item } from "@/lib/storage";
+import { saveItem, updateItem, getItems } from "@/lib/storage";
 
 type PricingType = "per_kg" | "per_unit" | "per_piece" | "per_dozen";
 
-const PRICING_OPTIONS: { label: string; value: PricingType }[] = [
-  { label: "Per Kg", value: "per_kg" },
-  { label: "Per Unit", value: "per_unit" },
-  { label: "Per Piece", value: "per_piece" },
-  { label: "Per Dozen", value: "per_dozen" },
+const PRICING_OPTIONS: { label: string; value: PricingType; icon: string }[] = [
+  { label: "Per Kg", value: "per_kg", icon: "scale-outline" },
+  { label: "Per Unit", value: "per_unit", icon: "cube-outline" },
+  { label: "Per Piece", value: "per_piece", icon: "ellipse-outline" },
+  { label: "Per Dozen", value: "per_dozen", icon: "grid-outline" },
 ];
 
 export default function AddItemScreen() {
@@ -37,7 +35,6 @@ export default function AddItemScreen() {
   const [price, setPrice] = useState("");
   const [pricingType, setPricingType] = useState<PricingType>("per_kg");
   const [quantity, setQuantity] = useState("");
-  const [imageUri, setImageUri] = useState("");
 
   useEffect(() => {
     if (params.editId) {
@@ -53,47 +50,6 @@ export default function AddItemScreen() {
       setPrice(item.price.toString());
       setPricingType(item.pricingType);
       setQuantity(item.quantity || "");
-      setImageUri(item.imageUri);
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Camera Permission", "We need camera permission to take photos of items.");
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Gallery Permission", "We need permission to access your photos.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
@@ -106,10 +62,6 @@ export default function AddItemScreen() {
       Alert.alert("Invalid Price", "Please enter a valid price.");
       return;
     }
-    if (!imageUri) {
-      Alert.alert("No Photo", "Please take or select a photo of the item.");
-      return;
-    }
 
     if (isEditing && params.editId) {
       await updateItem(params.editId, {
@@ -117,7 +69,6 @@ export default function AddItemScreen() {
         price: parseFloat(price),
         pricingType,
         quantity: quantity.trim() || undefined,
-        imageUri,
       });
     } else {
       await saveItem({
@@ -125,7 +76,6 @@ export default function AddItemScreen() {
         price: parseFloat(price),
         pricingType,
         quantity: quantity.trim() || undefined,
-        imageUri,
       });
     }
 
@@ -153,29 +103,13 @@ export default function AddItemScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Pressable
-            onPress={handleTakePhoto}
-            style={[styles.imageContainer, imageUri ? styles.imageContainerFilled : null]}
-          >
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={48} color={Colors.textLight} />
-                <Text style={styles.imagePlaceholderText}>Tap to take photo</Text>
-              </View>
-            )}
-          </Pressable>
-
-          <View style={styles.imageActions}>
-            <Pressable onPress={handleTakePhoto} style={styles.imageActionBtn}>
-              <Ionicons name="camera-outline" size={20} color={Colors.primary} />
-              <Text style={styles.imageActionText}>Camera</Text>
-            </Pressable>
-            <Pressable onPress={handlePickImage} style={styles.imageActionBtn}>
-              <Ionicons name="images-outline" size={20} color={Colors.primary} />
-              <Text style={styles.imageActionText}>Gallery</Text>
-            </Pressable>
+          <View style={styles.iconHeader}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="pricetag" size={32} color={Colors.primary} />
+            </View>
+            <Text style={styles.iconSubtext}>
+              {isEditing ? "Update item details" : "Add a new item to your price list"}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -187,19 +121,23 @@ export default function AddItemScreen() {
                 placeholderTextColor={Colors.textLight}
                 value={name}
                 onChangeText={setName}
+                autoFocus={!isEditing}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Price (INR)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter price"
-                placeholderTextColor={Colors.textLight}
-                keyboardType="numeric"
-                value={price}
-                onChangeText={setPrice}
-              />
+              <View style={styles.priceInputRow}>
+                <Text style={styles.currencySymbol}>{"\u20B9"}</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0"
+                  placeholderTextColor={Colors.textLight}
+                  keyboardType="numeric"
+                  value={price}
+                  onChangeText={setPrice}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -217,6 +155,11 @@ export default function AddItemScreen() {
                       pricingType === opt.value && styles.pricingOptionActive,
                     ]}
                   >
+                    <Ionicons
+                      name={opt.icon as any}
+                      size={18}
+                      color={pricingType === opt.value ? Colors.primary : Colors.textLight}
+                    />
                     <Text
                       style={[
                         styles.pricingOptionText,
@@ -239,8 +182,21 @@ export default function AddItemScreen() {
                 value={quantity}
                 onChangeText={setQuantity}
               />
+              <Text style={styles.inputHint}>
+                This will show up in the WhatsApp message if filled
+              </Text>
             </View>
           </View>
+
+          {name.trim() && price.trim() && (
+            <View style={styles.previewCard}>
+              <Text style={styles.previewLabel}>Preview in message:</Text>
+              <Text style={styles.previewText}>
+                {"\uD83D\uDCB0"} *{name.trim()}* - {"\u20B9"}{price}{getPricingLabel(pricingType)}
+                {quantity.trim() ? ` | ${quantity.trim()} available` : ""}
+              </Text>
+            </View>
+          )}
         </ScrollView>
 
         <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
@@ -258,6 +214,16 @@ export default function AddItemScreen() {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+function getPricingLabel(type: string): string {
+  switch (type) {
+    case "per_kg": return "/kg";
+    case "per_unit": return "/unit";
+    case "per_piece": return "/pc";
+    case "per_dozen": return "/dozen";
+    default: return "";
+  }
 }
 
 const styles = StyleSheet.create({
@@ -292,61 +258,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
-  imageContainer: {
-    width: "100%",
-    height: 220,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceElevated,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: "dashed",
+  iconHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+    marginTop: 8,
   },
-  imageContainerFilled: {
-    borderStyle: "solid",
-    borderColor: Colors.primaryLight,
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    flex: 1,
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.primary + "12",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    marginBottom: 10,
   },
-  imagePlaceholderText: {
-    fontSize: 15,
-    fontFamily: "Nunito_600SemiBold",
-    color: Colors.textLight,
-  },
-  imageActions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 24,
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  imageActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: Colors.primary + "10",
-  },
-  imageActionText: {
+  iconSubtext: {
     fontSize: 14,
-    fontFamily: "Nunito_600SemiBold",
-    color: Colors.primary,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textSecondary,
   },
-  form: {
-    marginTop: 16,
-  },
+  form: {},
   inputGroup: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
@@ -365,30 +298,83 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito_400Regular",
     color: Colors.text,
   },
+  priceInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+  },
+  currencySymbol: {
+    fontSize: 22,
+    fontFamily: "Nunito_800ExtraBold",
+    color: Colors.primaryDark,
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 22,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.text,
+    height: "100%",
+  },
+  inputHint: {
+    fontSize: 12,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
   pricingRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
   pricingOption: {
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   pricingOptionActive: {
-    backgroundColor: Colors.primary + "15",
+    backgroundColor: Colors.primary + "12",
     borderColor: Colors.primary,
   },
   pricingOptionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Nunito_600SemiBold",
     color: Colors.textSecondary,
   },
   pricingOptionTextActive: {
     color: Colors.primary,
+  },
+  previewCard: {
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 8,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.textLight,
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 14,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.text,
+    lineHeight: 22,
   },
   bottomBar: {
     paddingHorizontal: 20,

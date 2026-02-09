@@ -9,39 +9,58 @@ import {
   Platform,
   Linking,
   RefreshControl,
+  Modal,
 } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { getItems, deleteItem, getPricingLabel, formatCurrency, Item } from "@/lib/storage";
+import {
+  getItems,
+  deleteItem,
+  getSettings,
+  getPricingLabel,
+  formatCurrencyShort,
+  generateWhatsAppMessage,
+  Item,
+  Settings,
+  WhatsAppGroup,
+} from "@/lib/storage";
+
+const FLASH_DURATIONS = [1, 2, 3, 4, 5, 6];
 
 export default function ItemsScreen() {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Item[]>([]);
+  const [settings, setSettingsData] = useState<Settings | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [flashSale, setFlashSale] = useState(false);
+  const [flashDuration, setFlashDuration] = useState(2);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareGroupIndex, setShareGroupIndex] = useState(0);
 
-  const loadItems = useCallback(async () => {
+  const loadData = useCallback(async () => {
     const data = await getItems();
     setItems(data);
+    const s = await getSettings();
+    setSettingsData(s);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadItems();
-    }, [loadItems])
+      loadData();
+    }, [loadData])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadItems();
+    await loadData();
     setRefreshing(false);
   };
 
   const handleDelete = (item: Item) => {
-    Alert.alert("Delete Item", `Remove "${item.name}" from your catalog?`, [
+    Alert.alert("Delete Item", `Remove "${item.name}" from your list?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -49,27 +68,36 @@ export default function ItemsScreen() {
         onPress: async () => {
           await deleteItem(item.id);
           if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadItems();
+          loadData();
         },
       },
     ]);
   };
 
-  const handleShareAll = async () => {
+  const shareToWhatsApp = async () => {
     if (items.length === 0) {
       Alert.alert("No Items", "Add some items first to share.");
       return;
     }
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    let message = "*Today's Fresh Items*\n\n";
-    items.forEach((item, idx) => {
-      message += `${idx + 1}. *${item.name}* - ${formatCurrency(item.price)}${getPricingLabel(item.pricingType)}`;
-      if (item.quantity) message += ` (${item.quantity} available)`;
-      message += "\n";
-    });
-    message += "\n_Sent via FreshCart_";
+    const message = generateWhatsAppMessage(
+      items,
+      settings?.businessName || "",
+      flashSale,
+      flashDuration
+    );
 
+    const groups = settings?.whatsappGroups || [];
+    if (groups.length > 0) {
+      setShareGroupIndex(0);
+      setShowShareModal(true);
+    } else {
+      openWhatsApp(message);
+    }
+  };
+
+  const openWhatsApp = async (message: string) => {
     const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(whatsappUrl);
     if (canOpen) {
@@ -79,76 +107,143 @@ export default function ItemsScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: Item }) => (
-    <Pressable
-      style={({ pressed }) => [styles.itemCard, pressed && styles.itemCardPressed]}
-      onLongPress={() => handleDelete(item)}
-      onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
-    >
-      <Image source={{ uri: item.imageUri }} style={styles.itemImage} contentFit="cover" />
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.itemPrice}>
-          {formatCurrency(item.price)}
-          <Text style={styles.itemUnit}>{getPricingLabel(item.pricingType)}</Text>
-        </Text>
-        {item.quantity ? (
-          <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
-        ) : null}
+  const handleShareToGroup = () => {
+    const message = generateWhatsAppMessage(
+      items,
+      settings?.businessName || "",
+      flashSale,
+      flashDuration
+    );
+    openWhatsApp(message);
+  };
+
+  const handleNextGroup = () => {
+    const groups = settings?.whatsappGroups || [];
+    if (shareGroupIndex < groups.length - 1) {
+      setShareGroupIndex(shareGroupIndex + 1);
+    } else {
+      setShowShareModal(false);
+    }
+  };
+
+  const renderItem = ({ item, index }: { item: Item; index: number }) => (
+    <View style={styles.itemRow}>
+      <View style={styles.itemNumber}>
+        <Text style={styles.itemNumberText}>{index + 1}</Text>
       </View>
       <Pressable
-        onPress={() => handleDelete(item)}
-        hitSlop={8}
-        style={styles.deleteBtn}
+        style={({ pressed }) => [styles.itemCard, pressed && styles.itemCardPressed]}
+        onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
+        onLongPress={() => handleDelete(item)}
       >
-        <Ionicons name="trash-outline" size={18} color={Colors.error} />
+        <View style={styles.itemMainInfo}>
+          <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+          {item.quantity ? (
+            <Text style={styles.itemQty}>{item.quantity} available</Text>
+          ) : null}
+        </View>
+        <View style={styles.itemPriceBox}>
+          <Text style={styles.itemPrice}>{formatCurrencyShort(item.price)}</Text>
+          <Text style={styles.itemUnit}>{getPricingLabel(item.pricingType)}</Text>
+        </View>
+        <View style={styles.itemActions}>
+          <Pressable
+            onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
+            hitSlop={8}
+          >
+            <Ionicons name="create-outline" size={18} color={Colors.textSecondary} />
+          </Pressable>
+          <Pressable onPress={() => handleDelete(item)} hitSlop={8}>
+            <Ionicons name="trash-outline" size={18} color={Colors.error} />
+          </Pressable>
+        </View>
       </Pressable>
-    </Pressable>
+    </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="leaf-outline" size={64} color={Colors.border} />
+      <Ionicons name="storefront-outline" size={64} color={Colors.border} />
       <Text style={styles.emptyTitle}>No items yet</Text>
       <Text style={styles.emptyText}>
-        Tap the + button to add fruits, vegetables, or other items
+        Tap the + button to add items to your daily price list
       </Text>
     </View>
   );
+
+  const groups = settings?.whatsappGroups || [];
+  const currentGroup = groups[shareGroupIndex];
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Today's Items</Text>
-          <Text style={styles.headerSubtitle}>{items.length} items listed</Text>
+          <Text style={styles.headerTitle}>Apni Dukan</Text>
+          <Text style={styles.headerSubtitle}>{items.length} items in today's list</Text>
         </View>
-        <View style={styles.headerActions}>
-          {items.length > 0 && (
-            <Pressable onPress={handleShareAll} style={styles.headerBtn}>
-              <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
-            </Pressable>
-          )}
+        <Pressable
+          onPress={() => {
+            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push("/add-item");
+          }}
+          style={styles.addBtn}
+        >
+          <Ionicons name="add" size={24} color={Colors.white} />
+        </Pressable>
+      </View>
+
+      {items.length > 0 && (
+        <View style={styles.flashSaleBar}>
           <Pressable
             onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/add-item");
+              setFlashSale(!flashSale);
+              if (Platform.OS !== "web") Haptics.selectionAsync();
             }}
-            style={styles.addBtn}
+            style={[styles.flashToggle, flashSale && styles.flashToggleActive]}
           >
-            <Ionicons name="add" size={24} color={Colors.white} />
+            <Ionicons
+              name="flash"
+              size={16}
+              color={flashSale ? Colors.white : Colors.flashSale}
+            />
+            <Text style={[styles.flashToggleText, flashSale && styles.flashToggleTextActive]}>
+              Flash Sale
+            </Text>
           </Pressable>
+
+          {flashSale && (
+            <View style={styles.durationRow}>
+              {FLASH_DURATIONS.map((hrs) => (
+                <Pressable
+                  key={hrs}
+                  onPress={() => {
+                    setFlashDuration(hrs);
+                    if (Platform.OS !== "web") Haptics.selectionAsync();
+                  }}
+                  style={[
+                    styles.durationChip,
+                    flashDuration === hrs && styles.durationChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.durationChipText,
+                      flashDuration === hrs && styles.durationChipTextActive,
+                    ]}
+                  >
+                    {hrs}hr
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
-      </View>
+      )}
 
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
         contentContainerStyle={[
           styles.listContent,
           items.length === 0 && styles.listContentEmpty,
@@ -159,6 +254,76 @@ export default function ItemsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       />
+
+      {items.length > 0 && (
+        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60 }]}>
+          <Pressable
+            style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+            onPress={shareToWhatsApp}
+          >
+            <Ionicons name="logo-whatsapp" size={22} color={Colors.white} />
+            <Text style={styles.shareBtnText}>
+              {flashSale ? "Share Flash Sale" : "Share Price List"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="logo-whatsapp" size={28} color={Colors.whatsapp} />
+              <Text style={styles.modalTitle}>Share to Groups</Text>
+            </View>
+
+            <Text style={styles.modalGroupLabel}>
+              Send to group {shareGroupIndex + 1} of {groups.length}:
+            </Text>
+            <View style={styles.modalGroupBadge}>
+              <Ionicons name="people" size={18} color={Colors.primary} />
+              <Text style={styles.modalGroupName}>{currentGroup?.name || "Group"}</Text>
+            </View>
+
+            <Text style={styles.modalHint}>
+              WhatsApp will open. Select the "{currentGroup?.name}" group and send the message.
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [styles.modalSendBtn, pressed && { opacity: 0.9 }]}
+              onPress={handleShareToGroup}
+            >
+              <Ionicons name="send" size={18} color={Colors.white} />
+              <Text style={styles.modalSendText}>Open WhatsApp</Text>
+            </Pressable>
+
+            <View style={styles.modalFooter}>
+              {shareGroupIndex < groups.length - 1 ? (
+                <Pressable onPress={handleNextGroup} style={styles.modalNextBtn}>
+                  <Text style={styles.modalNextText}>
+                    Next: {groups[shareGroupIndex + 1]?.name}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
+                </Pressable>
+              ) : (
+                <Pressable onPress={() => setShowShareModal(false)} style={styles.modalNextBtn}>
+                  <Text style={styles.modalNextText}>Done</Text>
+                  <Ionicons name="checkmark" size={16} color={Colors.success} />
+                </Pressable>
+              )}
+
+              <Pressable onPress={() => setShowShareModal(false)}>
+                <Text style={styles.modalCloseText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -173,36 +338,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: "Nunito_800ExtraBold",
-    color: Colors.text,
+    color: Colors.primaryDark,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Nunito_400Regular",
     color: Colors.textSecondary,
     marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  headerBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.cardShadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   addBtn: {
     width: 44,
@@ -217,57 +364,112 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  flashSaleBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  flashToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.flashSale + "12",
+    borderWidth: 1,
+    borderColor: Colors.flashSale + "30",
+  },
+  flashToggleActive: {
+    backgroundColor: Colors.flashSale,
+    borderColor: Colors.flashSale,
+  },
+  flashToggleText: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.flashSale,
+  },
+  flashToggleTextActive: {
+    color: Colors.white,
+  },
+  durationRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 10,
+    flexWrap: "wrap",
+  },
+  durationChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  durationChipActive: {
+    backgroundColor: Colors.flashSale + "15",
+    borderColor: Colors.flashSale,
+  },
+  durationChipText: {
+    fontSize: 13,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  durationChipTextActive: {
+    color: Colors.flashSale,
+  },
   listContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 100,
+    paddingHorizontal: 16,
+    paddingBottom: 140,
   },
   listContentEmpty: {
     flex: 1,
   },
-  row: {
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  itemNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary + "15",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  itemNumberText: {
+    fontSize: 12,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.primary,
   },
   itemCard: {
     flex: 1,
-    margin: 4,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    overflow: "hidden",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     shadowColor: Colors.cardShadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
-    maxWidth: "48%",
+    shadowRadius: 4,
+    elevation: 2,
   },
   itemCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.95,
+    transform: [{ scale: 0.99 }],
   },
-  itemImage: {
-    width: "100%",
-    height: 120,
-    backgroundColor: Colors.surfaceElevated,
-  },
-  itemInfo: {
-    padding: 12,
+  itemMainInfo: {
+    flex: 1,
+    marginRight: 8,
   },
   itemName: {
     fontSize: 15,
     fontFamily: "Nunito_700Bold",
     color: Colors.text,
-  },
-  itemPrice: {
-    fontSize: 18,
-    fontFamily: "Nunito_800ExtraBold",
-    color: Colors.primary,
-    marginTop: 4,
-  },
-  itemUnit: {
-    fontSize: 13,
-    fontFamily: "Nunito_400Regular",
-    color: Colors.textSecondary,
   },
   itemQty: {
     fontSize: 12,
@@ -275,16 +477,55 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginTop: 2,
   },
-  deleteBtn: {
+  itemPriceBox: {
+    alignItems: "flex-end",
+    marginRight: 12,
+  },
+  itemPrice: {
+    fontSize: 17,
+    fontFamily: "Nunito_800ExtraBold",
+    color: Colors.primaryDark,
+  },
+  itemUnit: {
+    fontSize: 11,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textSecondary,
+  },
+  itemActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  bottomBar: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: Colors.background,
+  },
+  shareBtn: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.whatsapp,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+    shadowColor: Colors.whatsapp,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  shareBtnPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  shareBtnText: {
+    fontSize: 16,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
   },
   emptyContainer: {
     flex: 1,
@@ -304,5 +545,93 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: "center",
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxWidth: 360,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "Nunito_800ExtraBold",
+    color: Colors.text,
+  },
+  modalGroupLabel: {
+    fontSize: 13,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textSecondary,
+    marginBottom: 8,
+  },
+  modalGroupBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.primary + "10",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  modalGroupName: {
+    fontSize: 16,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.text,
+  },
+  modalHint: {
+    fontSize: 12,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  modalSendBtn: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.whatsapp,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  modalSendText: {
+    fontSize: 15,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalNextBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  modalNextText: {
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.primary,
+  },
+  modalCloseText: {
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.textLight,
   },
 });

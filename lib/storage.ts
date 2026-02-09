@@ -1,10 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEYS = {
-  ITEMS: "freshcart_items",
-  BILLS: "freshcart_bills",
-  SETTINGS: "freshcart_settings",
-  DAILY_ACCOUNTS: "freshcart_daily_accounts",
+  ITEMS: "apnidukan_items",
+  BILLS: "apnidukan_bills",
+  SETTINGS: "apnidukan_settings",
+  DAILY_ACCOUNTS: "apnidukan_daily_accounts",
 };
 
 export interface Item {
@@ -12,7 +12,6 @@ export interface Item {
   name: string;
   price: number;
   pricingType: "per_kg" | "per_unit" | "per_piece" | "per_dozen";
-  imageUri: string;
   quantity?: string;
   createdAt: string;
   updatedAt: string;
@@ -25,7 +24,6 @@ export interface BillItem {
   pricingType: string;
   quantity: number;
   total: number;
-  imageUri: string;
 }
 
 export interface Bill {
@@ -38,10 +36,16 @@ export interface Bill {
   paid: boolean;
 }
 
+export interface WhatsAppGroup {
+  id: string;
+  name: string;
+}
+
 export interface Settings {
   upiId: string;
   businessName: string;
   phoneNumber: string;
+  whatsappGroups: WhatsAppGroup[];
 }
 
 export interface DailyAccount {
@@ -90,6 +94,10 @@ export async function deleteItem(id: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(filtered));
 }
 
+export async function reorderItems(newItems: Item[]): Promise<void> {
+  await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(newItems));
+}
+
 export async function getBills(): Promise<Bill[]> {
   const data = await AsyncStorage.getItem(KEYS.BILLS);
   return data ? JSON.parse(data) : [];
@@ -124,7 +132,16 @@ export async function deleteBill(id: string): Promise<void> {
 
 export async function getSettings(): Promise<Settings> {
   const data = await AsyncStorage.getItem(KEYS.SETTINGS);
-  return data ? JSON.parse(data) : { upiId: "", businessName: "", phoneNumber: "" };
+  if (data) {
+    const parsed = JSON.parse(data);
+    return {
+      upiId: parsed.upiId || "",
+      businessName: parsed.businessName || "",
+      phoneNumber: parsed.phoneNumber || "",
+      whatsappGroups: parsed.whatsappGroups || [],
+    };
+  }
+  return { upiId: "", businessName: "", phoneNumber: "", whatsappGroups: [] };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
@@ -167,10 +184,86 @@ export function getPricingLabel(type: string): string {
   }
 }
 
+export function getPricingEmoji(type: string): string {
+  switch (type) {
+    case "per_kg": return "\u2696\uFE0F";
+    case "per_unit": return "\uD83D\uDCE6";
+    case "per_piece": return "\uD83D\uDD39";
+    case "per_dozen": return "\uD83D\uDCE6";
+    default: return "";
+  }
+}
+
 export function formatCurrency(amount: number): string {
+  return "\u20B9" + amount.toFixed(2);
+}
+
+export function formatCurrencyShort(amount: number): string {
+  if (amount === Math.floor(amount)) {
+    return "\u20B9" + amount.toString();
+  }
   return "\u20B9" + amount.toFixed(2);
 }
 
 export function generateUPILink(upiId: string, name: string, amount: number): string {
   return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}&cu=INR`;
+}
+
+export function generateWhatsAppMessage(
+  items: Item[],
+  businessName: string,
+  flashSale: boolean,
+  flashDuration: number,
+): string {
+  const name = businessName || "Apni Dukan";
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  let msg = "";
+
+  if (flashSale) {
+    msg += `\u26A1 *${name} - FLASH SALE!* \u26A1\n`;
+    msg += `\u23F0 _Exclusive prices for next ${flashDuration} ${flashDuration === 1 ? "hour" : "hours"} only!_\n`;
+    msg += `\uD83D\uDCC5 ${dateStr}\n`;
+    msg += `\n${"━".repeat(28)}\n\n`;
+    msg += `\uD83D\uDD25 *TODAY'S SPECIAL PRICES* \uD83D\uDD25\n\n`;
+  } else {
+    msg += `\uD83D\uDED2 *${name}* \uD83D\uDED2\n`;
+    msg += `\uD83D\uDCC5 ${dateStr}\n`;
+    msg += `\n${"━".repeat(28)}\n\n`;
+    msg += `\uD83C\uDF3F *TODAY'S PRICE LIST* \uD83C\uDF3F\n\n`;
+  }
+
+  items.forEach((item, idx) => {
+    const priceLabel = getPricingLabel(item.pricingType);
+    const price = formatCurrencyShort(item.price);
+    msg += `${idx + 1}. *${item.name}*\n`;
+    msg += `   \uD83D\uDCB0 ${price}${priceLabel}`;
+    if (item.quantity) {
+      msg += `  |  \uD83D\uDCE6 ${item.quantity} available`;
+    }
+    msg += `\n\n`;
+  });
+
+  msg += `${"━".repeat(28)}\n\n`;
+
+  if (flashSale) {
+    const endTime = new Date(today.getTime() + flashDuration * 60 * 60 * 1000);
+    const endTimeStr = endTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    msg += `\u23F0 *Offer valid till ${endTimeStr}*\n`;
+    msg += `\u26A1 _Hurry! Limited time offer!_ \u26A1\n\n`;
+  }
+
+  msg += `\uD83D\uDCDE _Order now! Contact us for delivery_\n`;
+  msg += `\n_Sent via ${name}_`;
+
+  return msg;
 }

@@ -10,7 +10,6 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,16 +18,11 @@ import Colors from "@/constants/colors";
 import {
   getItems,
   saveBill,
-  getSettings,
-  formatCurrency,
+  formatCurrencyShort,
   getPricingLabel,
   Item,
   BillItem,
 } from "@/lib/storage";
-
-interface SelectedItem extends Item {
-  billQty: string;
-}
 
 export default function CreateBillScreen() {
   const insets = useSafeAreaInsets();
@@ -76,7 +70,6 @@ export default function CreateBillScreen() {
           pricingType: item.pricingType,
           quantity: qty,
           total: item.price * qty,
-          imageUri: item.imageUri,
         };
       });
   };
@@ -128,15 +121,14 @@ export default function CreateBillScreen() {
           style={styles.itemMainRow}
           onPress={() => toggleItem(item.id)}
         >
-          <Image source={{ uri: item.imageUri }} style={styles.itemImage} contentFit="cover" />
+          <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+            {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
+          </View>
           <View style={styles.itemInfo}>
             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.itemPrice}>
-              {formatCurrency(item.price)}{getPricingLabel(item.pricingType)}
+              {formatCurrencyShort(item.price)}{getPricingLabel(item.pricingType)}
             </Text>
-          </View>
-          <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
-            {isSelected && <Ionicons name="checkmark" size={16} color={Colors.white} />}
           </View>
         </Pressable>
         {isSelected && (
@@ -167,7 +159,7 @@ export default function CreateBillScreen() {
               <Ionicons name="add" size={16} color={Colors.text} />
             </Pressable>
             <Text style={styles.lineTotal}>
-              = {formatCurrency(item.price * (parseFloat(qty) || 0))}
+              = {formatCurrencyShort(item.price * (parseFloat(qty) || 0))}
             </Text>
           </View>
         )}
@@ -248,7 +240,7 @@ export default function CreateBillScreen() {
 
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="leaf-outline" size={48} color={Colors.border} />
+          <Ionicons name="storefront-outline" size={48} color={Colors.border} />
           <Text style={styles.emptyText}>No items in catalog. Add items first.</Text>
         </View>
       ) : (
@@ -266,7 +258,7 @@ export default function CreateBillScreen() {
         <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{selected.size} items</Text>
-            <Text style={styles.totalValue}>{formatCurrency(totalAmount)}</Text>
+            <Text style={styles.totalValue}>{formatCurrencyShort(totalAmount)}</Text>
           </View>
           <Pressable
             style={({ pressed }) => [styles.createBtn, pressed && styles.createBtnPressed]}
@@ -313,14 +305,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    backgroundColor: Colors.primary + "10",
+    backgroundColor: Colors.primary + "12",
     borderRadius: 10,
     marginBottom: 8,
   },
   customerBannerText: {
     fontSize: 14,
     fontFamily: "Nunito_600SemiBold",
-    color: Colors.primary,
+    color: Colors.primaryDark,
   },
   detailsForm: {
     flex: 1,
@@ -366,28 +358,7 @@ const styles = StyleSheet.create({
   itemMainRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-  },
-  itemImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceElevated,
-  },
-  itemInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  itemName: {
-    fontSize: 15,
-    fontFamily: "Nunito_700Bold",
-    color: Colors.text,
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontFamily: "Nunito_600SemiBold",
-    color: Colors.primary,
-    marginTop: 2,
+    padding: 14,
   },
   checkbox: {
     width: 24,
@@ -397,15 +368,30 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
   },
   checkboxActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 15,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.text,
+  },
+  itemPrice: {
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.primaryDark,
+    marginTop: 2,
+  },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingBottom: 12,
     gap: 8,
   },
@@ -437,7 +423,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 15,
     fontFamily: "Nunito_700Bold",
-    color: Colors.accent,
+    color: Colors.primaryDark,
   },
   bottomBar: {
     paddingHorizontal: 20,

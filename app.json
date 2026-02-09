@@ -1,26 +1,26 @@
 {
   "expo": {
-    "name": "FreshCart",
-    "slug": "freshcart",
+    "name": "Apni Dukan",
+    "slug": "apni-dukan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "freshcart",
+    "scheme": "apnidukan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1B5E20"
+      "backgroundColor": "#FF8F00"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.freshcart"
+      "bundleIdentifier": "com.apnidukan"
     },
     "android": {
-      "package": "com.freshcart",
+      "package": "com.apnidukan",
       "adaptiveIcon": {
-        "backgroundColor": "#1B5E20",
+        "backgroundColor": "#FF8F00",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -37,13 +37,7 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow FreshCart to access your camera to take photos of items."
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

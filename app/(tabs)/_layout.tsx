@@ -11,7 +11,7 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "leaf", selected: "leaf.fill" }} />
+        <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
         <Label>Items</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bills">
@@ -76,7 +76,7 @@ function ClassicTabLayout() {
         options={{
           title: "Items",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="leaf" size={size} color={color} />
+            <Ionicons name="storefront" size={size} color={color} />
           ),
         }}
       />
