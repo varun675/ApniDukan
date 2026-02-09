@@ -28,6 +28,7 @@ export interface BillItem {
 
 export interface Bill {
   id: string;
+  billNumber: string;
   customerName: string;
   flatNumber: string;
   items: BillItem[];
@@ -141,11 +142,20 @@ export function groupBillsByDate(bills: Bill[]): { date: string; dateLabel: stri
   });
 }
 
-export async function saveBill(bill: Omit<Bill, "id" | "createdAt">): Promise<Bill> {
+function generateBillNumber(existingBills: Bill[]): string {
+  const today = new Date();
+  const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  const todaysBills = existingBills.filter((b) => b.billNumber && b.billNumber.startsWith(datePrefix));
+  const nextNum = todaysBills.length + 1;
+  return `${datePrefix}-${String(nextNum).padStart(3, '0')}`;
+}
+
+export async function saveBill(bill: Omit<Bill, "id" | "createdAt" | "billNumber">): Promise<Bill> {
   const bills = await getBills();
   const newBill: Bill = {
     ...bill,
     id: generateId(),
+    billNumber: generateBillNumber(bills),
     createdAt: new Date().toISOString(),
   };
   bills.unshift(newBill);
@@ -248,16 +258,25 @@ export function formatCurrencyShort(amount: number): string {
   return "\u20B9" + amount.toFixed(2);
 }
 
-export function generateUPILink(upiId: string, name: string, amount: number): string {
+export function generateUPILink(upiId: string, name: string, amount: number, note?: string): string {
   const safeName = name.replace(/[^a-zA-Z0-9]/g, '') || "Shop";
-  return `upi://pay?pa=${upiId}&pn=${safeName}&am=${amount}`;
+  let link = `upi://pay?pa=${upiId}&pn=${safeName}&am=${amount}`;
+  if (note) {
+    const safeNote = note.replace(/[^a-zA-Z0-9 ,.\-\/]/g, '').substring(0, 50);
+    link += `&tn=${safeNote}`;
+  }
+  return link;
 }
 
-export function generatePaymentPageUrl(upiId: string, name: string, amount: number): string {
+export function generatePaymentPageUrl(upiId: string, name: string, amount: number, note?: string): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   if (!domain) return "";
   const baseUrl = `https://${domain}`;
-  return `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
+  let url = `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
+  if (note) {
+    url += `&tn=${encodeURIComponent(note)}`;
+  }
+  return url;
 }
 
 export function generateWhatsAppMessage(
