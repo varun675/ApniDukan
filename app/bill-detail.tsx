@@ -59,14 +59,8 @@ export default function BillDetailScreen() {
 
     const name = settings.businessName || "Apni Dukan";
 
-    let phonepeLink = "";
-    let gpayLink = "";
-    if (settings.phonepeUpiId) {
-      phonepeLink = generatePaymentPageUrl(settings.phonepeUpiId, name, bill.totalAmount, "phonepe");
-    }
-    if (settings.gpayUpiId) {
-      gpayLink = generatePaymentPageUrl(settings.gpayUpiId, name, bill.totalAmount, "gpay");
-    }
+    const payUpiId = settings.phonepeUpiId || settings.gpayUpiId || settings.upiId || "";
+    const payLink = payUpiId ? generatePaymentPageUrl(payUpiId, name, bill.totalAmount) : "";
 
     let message = `\uD83D\uDCCB *Bill from ${name}*\n\n`;
     message += `\uD83D\uDC64 *Customer:* ${bill.customerName}\n`;
@@ -87,23 +81,12 @@ export default function BillDetailScreen() {
     message += `${"━".repeat(28)}\n`;
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
-    const hasPaymentOptions = phonepeLink || gpayLink || settings.paymentLink || settings.upiId;
-    if (hasPaymentOptions) {
+    if (payLink || settings.upiId) {
       message += `\uD83D\uDCB3 *Pay Now:* ${formatCurrencyShort(bill.totalAmount)}\n\n`;
 
-      if (phonepeLink) {
-        message += `\u261D\uFE0F *Pay via PhonePe:*\n`;
-        message += `${phonepeLink}\n\n`;
-      }
-
-      if (gpayLink) {
-        message += `\u261D\uFE0F *Pay via Google Pay:*\n`;
-        message += `${gpayLink}\n\n`;
-      }
-
-      if (settings.paymentLink) {
-        message += `\u261D\uFE0F *Pay directly:*\n`;
-        message += `${settings.paymentLink}\n\n`;
+      if (payLink) {
+        message += `\u261D\uFE0F *Tap to pay (PhonePe / GPay / Paytm / any UPI):*\n`;
+        message += `${payLink}\n\n`;
       }
 
       if (settings.upiId) {
