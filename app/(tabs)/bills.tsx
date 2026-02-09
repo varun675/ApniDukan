@@ -243,6 +243,12 @@ export default function BillsScreen() {
               tintColor={Colors.primary}
             />
           }
+          ListFooterComponent={() => (
+            <View style={styles.poweredByContainer}>
+              <Text style={styles.poweredByText}>Powered by</Text>
+              <Text style={styles.poweredByCompany}>Codesmotech Consulting Pvt Ltd</Text>
+            </View>
+          )}
         />
       )}
     </View>
@@ -471,5 +477,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     lineHeight: 22,
+  },
+  poweredByContainer: {
+    alignItems: "center",
+    marginTop: 28,
+    marginBottom: 8,
+    paddingVertical: 12,
+  },
+  poweredByText: {
+    fontSize: 11,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+  },
+  poweredByCompany: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

@@ -277,6 +277,10 @@ export default function AccountsScreen() {
               ))}
             </View>
           )}
+          <View style={styles.poweredByContainer}>
+            <Text style={styles.poweredByText}>Powered by</Text>
+            <Text style={styles.poweredByCompany}>Codesmotech Consulting Pvt Ltd</Text>
+          </View>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -477,5 +481,22 @@ const styles = StyleSheet.create({
   historyProfit: {
     fontSize: 15,
     fontFamily: "Nunito_700Bold",
+  },
+  poweredByContainer: {
+    alignItems: "center",
+    marginTop: 28,
+    marginBottom: 8,
+    paddingVertical: 12,
+  },
+  poweredByText: {
+    fontSize: 11,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+  },
+  poweredByCompany: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

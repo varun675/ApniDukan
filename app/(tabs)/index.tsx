@@ -253,6 +253,12 @@ export default function ItemsScreen() {
           items.length === 0 && styles.listContentEmpty,
         ]}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={() => items.length > 0 ? (
+          <View style={styles.poweredByContainer}>
+            <Text style={styles.poweredByText}>Powered by</Text>
+            <Text style={styles.poweredByCompany}>Codesmotech Consulting Pvt Ltd</Text>
+          </View>
+        ) : null}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
@@ -637,5 +643,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Nunito_600SemiBold",
     color: Colors.textLight,
+  },
+  poweredByContainer: {
+    alignItems: "center",
+    marginTop: 28,
+    marginBottom: 8,
+    paddingVertical: 12,
+  },
+  poweredByText: {
+    fontSize: 11,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+  },
+  poweredByCompany: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });
