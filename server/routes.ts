@@ -115,11 +115,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       font-size: 18px;
       font-weight: 700;
       border: none;
+      outline: none;
       border-radius: 16px;
       cursor: pointer;
       text-decoration: none;
       transition: transform 0.1s;
       -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
     }
     .pay-btn:active { transform: scale(0.97); }
     .pay-btn svg {
@@ -184,12 +186,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div class="amount"><span class="rupee">₹</span>${amount}</div>
     <div class="divider"></div>
 
-    <div class="status" id="statusBadge">Opening your UPI app...</div>
+    <div class="status" id="statusBadge">Tap the button below to pay</div>
 
-    <a href="${upiLink}" class="pay-btn" id="payBtn">
+    <button class="pay-btn" id="payBtn" onclick="openUPI()">
       <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-      Pay ₹${amount}
-    </a>
+      Pay &#8377;${amount}
+    </button>
 
     <div class="pay-hint">Tap the button above to choose your UPI app<br>(PhonePe, GPay, Paytm, etc.)</div>
 
@@ -206,6 +208,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   <script>
     var badge = document.getElementById('statusBadge');
+
+    function openUPI() {
+      var link = "upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount}&cu=INR";
+      window.location.href = link;
+    }
 
     function copyUPI() {
       var id = "${upiId}";
