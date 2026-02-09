@@ -246,6 +246,23 @@ export function generateUPILink(upiId: string, name: string, amount: number): st
   return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}&cu=INR`;
 }
 
+export async function shortenUPILink(upiLink: string): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://tinyurl.com/api-create.php?url=${encodeURIComponent(upiLink)}`
+    );
+    if (response.ok) {
+      const shortUrl = await response.text();
+      if (shortUrl.startsWith("https://")) {
+        return shortUrl.trim();
+      }
+    }
+    return upiLink;
+  } catch {
+    return upiLink;
+  }
+}
+
 export function generateWhatsAppMessage(
   items: Item[],
   businessName: string,

@@ -23,6 +23,7 @@ import {
   formatCurrencyShort,
   getPricingLabel,
   generateUPILink,
+  shortenUPILink,
   Bill,
   Settings,
 } from "@/lib/storage";
@@ -57,6 +58,13 @@ export default function BillDetailScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const name = settings.businessName || "Apni Dukan";
+
+    let shortPayLink = "";
+    if (settings.upiId) {
+      const upiPayLink = generateUPILink(settings.upiId, name, bill.totalAmount);
+      shortPayLink = await shortenUPILink(upiPayLink);
+    }
+
     let message = `\uD83D\uDCCB *Bill from ${name}*\n\n`;
     message += `\uD83D\uDC64 *Customer:* ${bill.customerName}\n`;
     message += `\uD83C\uDFE0 *Flat:* ${bill.flatNumber}\n`;
@@ -76,23 +84,26 @@ export default function BillDetailScreen() {
     message += `${"━".repeat(28)}\n`;
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
-    if (settings.paymentLink || settings.upiId) {
+    if (settings.paymentLink || shortPayLink || settings.upiId) {
       message += `\uD83D\uDCB3 *Pay Now:* ${formatCurrencyShort(bill.totalAmount)}\n\n`;
 
       if (settings.paymentLink) {
-        message += `\u261D\uFE0F *Tap to pay instantly:*\n`;
+        message += `\u261D\uFE0F *Tap to pay:*\n`;
         message += `${settings.paymentLink}\n\n`;
       }
 
+      if (shortPayLink && shortPayLink.startsWith("https://")) {
+        message += `\u261D\uFE0F *Pay via UPI:*\n`;
+        message += `${shortPayLink}\n\n`;
+      }
+
       if (settings.upiId) {
-        const upiPayLink = generateUPILink(settings.upiId, name, bill.totalAmount);
         message += `UPI ID: *${settings.upiId}*\n`;
-        message += `UPI Link: ${upiPayLink}\n`;
       }
     }
 
     if (settings.phoneNumber) {
-      message += `\uD83D\uDCDE Contact: ${settings.phoneNumber}\n\n`;
+      message += `\n\uD83D\uDCDE Contact: ${settings.phoneNumber}\n\n`;
     }
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
