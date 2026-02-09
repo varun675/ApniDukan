@@ -13,6 +13,10 @@ Apni Dukan is a mobile-first grocery shop management app built with Expo (React 
 - Built attractive emoji-rich WhatsApp message formatting for price lists and bills
 - Created Summary tab with bar charts for daily expenses, sales, and profit/loss analytics over 7/14/30 day periods
 - AsyncStorage keys changed from `freshcart_*` to `apnidukan_*`
+- Added QR code upload in Settings for custom payment QR images
+- Built universal /pay endpoint: branded HTML page that auto-detects device and opens customer's preferred UPI app (PhonePe, GPay, Paytm, WhatsApp Pay). Uses upi:// deep link with Android intent:// fallback. Includes manual copy UPI ID option.
+- Settings has separate PhonePe UPI ID, Google Pay UPI ID, and General UPI ID fields
+- WhatsApp bill messages include a single universal payment link that works across all UPI apps on iOS and Android
 
 ## User Preferences
 
