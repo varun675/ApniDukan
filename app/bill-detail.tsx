@@ -76,12 +76,19 @@ export default function BillDetailScreen() {
     message += `${"━".repeat(28)}\n`;
     message += `\uD83D\uDCB0 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n\n`;
 
-    if (settings.upiId) {
-      const upiPayLink = generateUPILink(settings.upiId, name, bill.totalAmount);
+    if (settings.paymentLink || settings.upiId) {
       message += `\uD83D\uDCB3 *Pay Now:* ${formatCurrencyShort(bill.totalAmount)}\n\n`;
-      message += `\u261D\uFE0F *Tap below to pay instantly:*\n`;
-      message += `${upiPayLink}\n\n`;
-      message += `UPI ID: *${settings.upiId}*\n`;
+
+      if (settings.paymentLink) {
+        message += `\u261D\uFE0F *Tap to pay instantly:*\n`;
+        message += `${settings.paymentLink}\n\n`;
+      }
+
+      if (settings.upiId) {
+        const upiPayLink = generateUPILink(settings.upiId, name, bill.totalAmount);
+        message += `UPI ID: *${settings.upiId}*\n`;
+        message += `UPI Link: ${upiPayLink}\n`;
+      }
     }
 
     if (settings.phoneNumber) {
