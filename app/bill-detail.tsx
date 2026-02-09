@@ -109,6 +109,14 @@ export default function BillDetailScreen() {
 
     message += `\u2728 _Thank you for shopping with ${name}!_ \u2728`;
 
+    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+    const canOpen = await Linking.canOpenURL(whatsappUrl);
+    if (canOpen) {
+      await Linking.openURL(whatsappUrl);
+    } else {
+      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+    }
+
     if (settings.qrCodeImage && Platform.OS !== "web") {
       try {
         let fileUri = "";
@@ -126,21 +134,16 @@ export default function BillDetailScreen() {
 
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(fileUri, {
-            mimeType: "image/jpeg",
-            dialogTitle: message,
-          });
-          return;
+          setTimeout(async () => {
+            try {
+              await Sharing.shareAsync(fileUri, {
+                mimeType: "image/jpeg",
+                dialogTitle: "Share Payment QR Code",
+              });
+            } catch {}
+          }, 1500);
         }
       } catch {}
-    }
-
-    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    const canOpen = await Linking.canOpenURL(whatsappUrl);
-    if (canOpen) {
-      Linking.openURL(whatsappUrl);
-    } else {
-      Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
     }
   };
 
