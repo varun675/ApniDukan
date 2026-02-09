@@ -249,7 +249,8 @@ export function formatCurrencyShort(amount: number): string {
 }
 
 export function generateUPILink(upiId: string, name: string, amount: number): string {
-  return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}&cu=INR`;
+  const tn = `Payment to ${name}`;
+  return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&tn=${encodeURIComponent(tn)}&am=${amount.toFixed(2)}&cu=INR`;
 }
 
 export function generatePaymentPageUrl(upiId: string, name: string, amount: number): string {
