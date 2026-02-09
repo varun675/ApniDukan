@@ -19,8 +19,12 @@ function NativeTabLayout() {
         <Label>Bills</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="accounts">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
+        <Icon sf={{ default: "indianrupeesign.circle", selected: "indianrupeesign.circle.fill" }} />
         <Label>Accounts</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="summary">
+        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
+        <Label>Summary</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
@@ -89,6 +93,15 @@ function ClassicTabLayout() {
         name="accounts"
         options={{
           title: "Accounts",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cash" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="summary"
+        options={{
+          title: "Summary",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart" size={size} color={color} />
           ),
