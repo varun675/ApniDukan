@@ -261,14 +261,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     var txnNote = "${txnNote}";
 
-    function buildUpiParams() {
-      var params = "pa=" + pa + "&pn=" + payeeName + "&am=" + amt;
+    function buildUpiParams(forPhonePe) {
+      var pnValue = payeeName;
+      if (forPhonePe && txnNote) {
+        pnValue = payeeName + " " + txnNote.replace(/[^a-zA-Z0-9 ]/g, '');
+      }
+      var params = "pa=" + pa + "&pn=" + encodeURIComponent(pnValue) + "&am=" + amt;
       if (txnNote) { params += "&tn=" + encodeURIComponent(txnNote); }
       return params;
     }
 
     function openApp(app) {
-      var params = buildUpiParams();
+      var isPhonePe = app === 'phonepe';
+      var params = buildUpiParams(isPhonePe);
       var link = "";
       if (isAndroid) {
         if (app === 'phonepe') {
