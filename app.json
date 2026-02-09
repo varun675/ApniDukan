@@ -26,6 +26,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
     },
+    "description": "A product of Codesmotech Consulting Pvt Ltd. Mobile grocery shop management app for daily price list sharing, bill generation with UPI payments, and business analytics.",
     "web": {
       "favicon": "./assets/images/favicon.png"
     },

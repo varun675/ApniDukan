@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
 
     <div class="footer">
-      <span class="secure">&#x1F512;</span> Secure UPI payment &middot; Powered by Apni Dukan
+      <span class="secure">&#x1F512;</span> Secure UPI payment &middot; Powered by Codesmotech Consulting Pvt Ltd
     </div>
   </div>
 
