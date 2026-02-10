@@ -175,9 +175,8 @@ export default function ItemsScreen() {
   };
 
   const getOriginalPrice = (itemId: string): number | null => {
-    if (!flashSaleState || !flashSaleState.originalPrices[itemId]) return null;
-    const orig = flashSaleState.originalPrices[itemId];
-    return orig;
+    if (!flashSaleState || flashSaleState.originalPrices[itemId] === undefined) return null;
+    return flashSaleState.originalPrices[itemId];
   };
 
   const renderItem = ({ item, index }: { item: Item; index: number }) => {

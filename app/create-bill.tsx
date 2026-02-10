@@ -20,8 +20,10 @@ import {
   saveBill,
   formatCurrencyShort,
   getPricingLabel,
+  getFlashSaleState,
   Item,
   BillItem,
+  FlashSaleState,
 } from "@/lib/storage";
 
 export default function CreateBillScreen() {
@@ -31,6 +33,7 @@ export default function CreateBillScreen() {
   const [customerName, setCustomerName] = useState("");
   const [flatNumber, setFlatNumber] = useState("");
   const [step, setStep] = useState<"items" | "details">("details");
+  const [flashSaleState, setFlashSaleStateData] = useState<FlashSaleState | null>(null);
 
   useEffect(() => {
     loadItems();
@@ -39,6 +42,8 @@ export default function CreateBillScreen() {
   const loadItems = async () => {
     const data = await getItems();
     setItems(data);
+    const fsState = await getFlashSaleState();
+    setFlashSaleStateData(fsState);
   };
 
   const toggleItem = (id: string) => {
@@ -114,6 +119,8 @@ export default function CreateBillScreen() {
   const renderItemCard = ({ item }: { item: Item }) => {
     const isSelected = selected.has(item.id);
     const qty = selected.get(item.id) || "1";
+    const origPrice = flashSaleState?.originalPrices?.[item.id];
+    const isPriceChanged = origPrice !== undefined && origPrice !== item.price;
 
     return (
       <View style={[styles.itemCard, isSelected && styles.itemCardSelected]}>
@@ -126,9 +133,14 @@ export default function CreateBillScreen() {
           </View>
           <View style={styles.itemInfo}>
             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.itemPrice}>
-              {formatCurrencyShort(item.price)}{getPricingLabel(item.pricingType)}
-            </Text>
+            <View style={styles.priceRow}>
+              {isPriceChanged && (
+                <Text style={styles.originalPrice}>{formatCurrencyShort(origPrice)}</Text>
+              )}
+              <Text style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}>
+                {formatCurrencyShort(item.price)}{getPricingLabel(item.pricingType)}
+              </Text>
+            </View>
           </View>
         </Pressable>
         {isSelected && (
@@ -237,6 +249,13 @@ export default function CreateBillScreen() {
           {customerName} | Flat: {flatNumber}
         </Text>
       </View>
+
+      {flashSaleState && (
+        <View style={styles.flashSaleBanner}>
+          <Ionicons name="flash" size={14} color={Colors.white} />
+          <Text style={styles.flashSaleBannerText}>Flash Sale prices active</Text>
+        </View>
+      )}
 
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -387,6 +406,38 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito_600SemiBold",
     color: Colors.primaryDark,
     marginTop: 2,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  originalPrice: {
+    fontSize: 13,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    textDecorationLine: "line-through",
+  },
+  flashPrice: {
+    color: Colors.flashSale,
+    marginTop: 0,
+  },
+  flashSaleBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.flashSale,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  flashSaleBannerText: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
   },
   qtyRow: {
     flexDirection: "row",
