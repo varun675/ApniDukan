@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -23,9 +23,14 @@ import {
   getPricingLabel,
   formatCurrencyShort,
   generateWhatsAppMessage,
+  getFlashSaleState,
+  startFlashSale,
+  endFlashSale,
+  getFlashSaleRemainingTime,
   Item,
   Settings,
   WhatsAppGroup,
+  FlashSaleState,
 } from "@/lib/storage";
 
 const FLASH_DURATIONS = [1, 2, 3, 4, 5, 6];
@@ -37,14 +42,26 @@ export default function ItemsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [flashSale, setFlashSale] = useState(false);
   const [flashDuration, setFlashDuration] = useState(2);
+  const [flashSaleState, setFlashSaleStateData] = useState<FlashSaleState | null>(null);
+  const [countdown, setCountdown] = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareGroupIndex, setShareGroupIndex] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
     const data = await getItems();
     setItems(data);
     const s = await getSettings();
     setSettingsData(s);
+    const fsState = await getFlashSaleState();
+    if (fsState) {
+      setFlashSale(true);
+      setFlashDuration(fsState.duration);
+      setFlashSaleStateData(fsState);
+    } else {
+      setFlashSale(false);
+      setFlashSaleStateData(null);
+    }
   }, []);
 
   useFocusEffect(
@@ -52,6 +69,31 @@ export default function ItemsScreen() {
       loadData();
     }, [loadData])
   );
+
+  useEffect(() => {
+    if (flashSale && flashSaleState) {
+      const updateCountdown = async () => {
+        const remaining = await getFlashSaleRemainingTime();
+        if (remaining) {
+          setCountdown(`${String(remaining.hours).padStart(2, "0")}:${String(remaining.minutes).padStart(2, "0")}:${String(remaining.seconds).padStart(2, "0")}`);
+        } else {
+          setCountdown("");
+          setFlashSale(false);
+          setFlashSaleStateData(null);
+          loadData();
+          if (countdownRef.current) clearInterval(countdownRef.current);
+        }
+      };
+      updateCountdown();
+      countdownRef.current = setInterval(updateCountdown, 1000);
+      return () => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    } else {
+      setCountdown("");
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    }
+  }, [flashSale, flashSaleState]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -130,40 +172,54 @@ export default function ItemsScreen() {
     }
   };
 
-  const renderItem = ({ item, index }: { item: Item; index: number }) => (
-    <View style={styles.itemRow}>
-      <View style={styles.itemNumber}>
-        <Text style={styles.itemNumberText}>{index + 1}</Text>
+  const getOriginalPrice = (itemId: string): number | null => {
+    if (!flashSaleState || !flashSaleState.originalPrices[itemId]) return null;
+    const orig = flashSaleState.originalPrices[itemId];
+    return orig;
+  };
+
+  const renderItem = ({ item, index }: { item: Item; index: number }) => {
+    const originalPrice = getOriginalPrice(item.id);
+    const isPriceChanged = originalPrice !== null && originalPrice !== item.price;
+
+    return (
+      <View style={styles.itemRow}>
+        <View style={styles.itemNumber}>
+          <Text style={styles.itemNumberText}>{index + 1}</Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [styles.itemCard, pressed && styles.itemCardPressed, flashSaleState && styles.itemCardFlash]}
+          onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
+          onLongPress={() => handleDelete(item)}
+        >
+          <View style={styles.itemMainInfo}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+            {item.quantity ? (
+              <Text style={styles.itemQty}>{item.quantity} available</Text>
+            ) : null}
+          </View>
+          <View style={styles.itemPriceBox}>
+            {isPriceChanged && (
+              <Text style={styles.originalPrice}>{formatCurrencyShort(originalPrice)}</Text>
+            )}
+            <Text style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}>{formatCurrencyShort(item.price)}</Text>
+            <Text style={styles.itemUnit}>{getPricingLabel(item.pricingType)}</Text>
+          </View>
+          <View style={styles.itemActions}>
+            <Pressable
+              onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
+              hitSlop={8}
+            >
+              <Ionicons name="create-outline" size={18} color={Colors.textSecondary} />
+            </Pressable>
+            <Pressable onPress={() => handleDelete(item)} hitSlop={8}>
+              <Ionicons name="trash-outline" size={18} color={Colors.error} />
+            </Pressable>
+          </View>
+        </Pressable>
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.itemCard, pressed && styles.itemCardPressed]}
-        onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
-        onLongPress={() => handleDelete(item)}
-      >
-        <View style={styles.itemMainInfo}>
-          <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-          {item.quantity ? (
-            <Text style={styles.itemQty}>{item.quantity} available</Text>
-          ) : null}
-        </View>
-        <View style={styles.itemPriceBox}>
-          <Text style={styles.itemPrice}>{formatCurrencyShort(item.price)}</Text>
-          <Text style={styles.itemUnit}>{getPricingLabel(item.pricingType)}</Text>
-        </View>
-        <View style={styles.itemActions}>
-          <Pressable
-            onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
-            hitSlop={8}
-          >
-            <Ionicons name="create-outline" size={18} color={Colors.textSecondary} />
-          </Pressable>
-          <Pressable onPress={() => handleDelete(item)} hitSlop={8}>
-            <Ionicons name="trash-outline" size={18} color={Colors.error} />
-          </Pressable>
-        </View>
-      </Pressable>
-    </View>
-  );
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -198,47 +254,105 @@ export default function ItemsScreen() {
 
       {items.length > 0 && (
         <View style={styles.flashSaleBar}>
-          <Pressable
-            onPress={() => {
-              setFlashSale(!flashSale);
-              if (Platform.OS !== "web") Haptics.selectionAsync();
-            }}
-            style={[styles.flashToggle, flashSale && styles.flashToggleActive]}
-          >
-            <Ionicons
-              name="flash"
-              size={16}
-              color={flashSale ? Colors.white : Colors.flashSale}
-            />
-            <Text style={[styles.flashToggleText, flashSale && styles.flashToggleTextActive]}>
-              Flash Sale
-            </Text>
-          </Pressable>
+          {!flashSaleState ? (
+            <>
+              <Pressable
+                onPress={() => {
+                  setFlashSale(!flashSale);
+                  if (Platform.OS !== "web") Haptics.selectionAsync();
+                }}
+                style={[styles.flashToggle, flashSale && styles.flashToggleActive]}
+              >
+                <Ionicons
+                  name="flash"
+                  size={16}
+                  color={flashSale ? Colors.white : Colors.flashSale}
+                />
+                <Text style={[styles.flashToggleText, flashSale && styles.flashToggleTextActive]}>
+                  Flash Sale
+                </Text>
+              </Pressable>
 
-          {flashSale && (
-            <View style={styles.durationRow}>
-              {FLASH_DURATIONS.map((hrs) => (
-                <Pressable
-                  key={hrs}
-                  onPress={() => {
-                    setFlashDuration(hrs);
-                    if (Platform.OS !== "web") Haptics.selectionAsync();
-                  }}
-                  style={[
-                    styles.durationChip,
-                    flashDuration === hrs && styles.durationChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.durationChipText,
-                      flashDuration === hrs && styles.durationChipTextActive,
-                    ]}
+              {flashSale && (
+                <View style={styles.durationRow}>
+                  {FLASH_DURATIONS.map((hrs) => (
+                    <Pressable
+                      key={hrs}
+                      onPress={() => {
+                        setFlashDuration(hrs);
+                        if (Platform.OS !== "web") Haptics.selectionAsync();
+                      }}
+                      style={[
+                        styles.durationChip,
+                        flashDuration === hrs && styles.durationChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.durationChipText,
+                          flashDuration === hrs && styles.durationChipTextActive,
+                        ]}
+                      >
+                        {hrs}hr
+                      </Text>
+                    </Pressable>
+                  ))}
+                  <Pressable
+                    onPress={async () => {
+                      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      const state = await startFlashSale(flashDuration);
+                      setFlashSaleStateData(state);
+                      Alert.alert(
+                        "Flash Sale Started",
+                        `Flash sale is now active for ${flashDuration} hour${flashDuration > 1 ? "s" : ""}. You can now update item prices for the sale. Prices will automatically revert when the sale ends.`,
+                      );
+                    }}
+                    style={styles.startFlashBtn}
                   >
-                    {hrs}hr
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text style={styles.startFlashBtnText}>Start</Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.flashActiveBar}>
+              <View style={styles.flashActiveInfo}>
+                <Ionicons name="flash" size={18} color={Colors.white} />
+                <Text style={styles.flashActiveText}>Flash Sale Active</Text>
+                {countdown ? (
+                  <View style={styles.countdownBadge}>
+                    <Ionicons name="time-outline" size={14} color={Colors.flashSale} />
+                    <Text style={styles.countdownText}>{countdown}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => {
+                  Alert.alert(
+                    "End Flash Sale?",
+                    "This will stop the flash sale and revert all prices to their original values.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "End Sale",
+                        style: "destructive",
+                        onPress: async () => {
+                          await endFlashSale();
+                          setFlashSale(false);
+                          setFlashSaleStateData(null);
+                          setCountdown("");
+                          if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          loadData();
+                        },
+                      },
+                    ],
+                  );
+                }}
+                style={styles.endFlashBtn}
+              >
+                <Ionicons name="close-circle" size={16} color={Colors.white} />
+                <Text style={styles.endFlashBtnText}>End</Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -426,6 +540,78 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   durationChipTextActive: {
+    color: Colors.flashSale,
+  },
+  startFlashBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.flashSale,
+    marginLeft: 4,
+  },
+  startFlashBtnText: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+  },
+  flashActiveBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.flashSale,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  flashActiveInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  flashActiveText: {
+    fontSize: 14,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+  },
+  countdownBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  countdownText: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.flashSale,
+  },
+  endFlashBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  endFlashBtnText: {
+    fontSize: 13,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+  },
+  itemCardFlash: {
+    borderColor: Colors.flashSale + "40",
+  },
+  originalPrice: {
+    fontSize: 12,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    textDecorationLine: "line-through",
+  },
+  flashPrice: {
     color: Colors.flashSale,
   },
   listContent: {
