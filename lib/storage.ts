@@ -5,6 +5,7 @@ const KEYS = {
   BILLS: "apnidukan_bills",
   SETTINGS: "apnidukan_settings",
   DAILY_ACCOUNTS: "apnidukan_daily_accounts",
+  FLASH_SALE: "apnidukan_flash_sale",
 };
 
 export interface Item {
@@ -63,6 +64,13 @@ export interface DailyAccount {
   profit: number;
 }
 
+export interface FlashSaleState {
+  active: boolean;
+  endTime: string;
+  duration: number;
+  originalPrices: { [itemId: string]: number };
+}
+
 function generateId(): string {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 }
@@ -102,6 +110,68 @@ export async function deleteItem(id: string): Promise<void> {
 
 export async function reorderItems(newItems: Item[]): Promise<void> {
   await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(newItems));
+}
+
+export async function getFlashSaleState(): Promise<FlashSaleState | null> {
+  const data = await AsyncStorage.getItem(KEYS.FLASH_SALE);
+  if (!data) return null;
+  const state: FlashSaleState = JSON.parse(data);
+  if (state.active && new Date(state.endTime).getTime() <= Date.now()) {
+    await endFlashSale();
+    return null;
+  }
+  return state.active ? state : null;
+}
+
+export async function startFlashSale(durationHours: number): Promise<FlashSaleState> {
+  const items = await getItems();
+  const originalPrices: { [itemId: string]: number } = {};
+  items.forEach((item) => {
+    originalPrices[item.id] = item.price;
+  });
+  const endTime = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+  const state: FlashSaleState = {
+    active: true,
+    endTime,
+    duration: durationHours,
+    originalPrices,
+  };
+  await AsyncStorage.setItem(KEYS.FLASH_SALE, JSON.stringify(state));
+  return state;
+}
+
+export async function endFlashSale(): Promise<void> {
+  const data = await AsyncStorage.getItem(KEYS.FLASH_SALE);
+  if (!data) return;
+  const state: FlashSaleState = JSON.parse(data);
+  if (Object.keys(state.originalPrices).length > 0) {
+    const items = await getItems();
+    const updated = items.map((item) => {
+      if (state.originalPrices[item.id] !== undefined) {
+        return { ...item, price: state.originalPrices[item.id], updatedAt: new Date().toISOString() };
+      }
+      return item;
+    });
+    await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(updated));
+  }
+  await AsyncStorage.removeItem(KEYS.FLASH_SALE);
+}
+
+export async function isFlashSaleActive(): Promise<boolean> {
+  const state = await getFlashSaleState();
+  return state !== null && state.active;
+}
+
+export async function getFlashSaleRemainingTime(): Promise<{ hours: number; minutes: number; seconds: number } | null> {
+  const state = await getFlashSaleState();
+  if (!state) return null;
+  const remaining = new Date(state.endTime).getTime() - Date.now();
+  if (remaining <= 0) return null;
+  return {
+    hours: Math.floor(remaining / (1000 * 60 * 60)),
+    minutes: Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)),
+    seconds: Math.floor((remaining % (1000 * 60)) / 1000),
+  };
 }
 
 export async function getBills(): Promise<Bill[]> {
