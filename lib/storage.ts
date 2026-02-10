@@ -66,6 +66,7 @@ export interface DailyAccount {
 
 export interface FlashSaleState {
   active: boolean;
+  startTime: string;
   endTime: string;
   duration: number;
   originalPrices: { [itemId: string]: number };
@@ -129,9 +130,12 @@ export async function startFlashSale(durationHours: number): Promise<FlashSaleSt
   items.forEach((item) => {
     originalPrices[item.id] = item.price;
   });
-  const endTime = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const startTime = now.toISOString();
+  const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000).toISOString();
   const state: FlashSaleState = {
     active: true,
+    startTime,
     endTime,
     duration: durationHours,
     originalPrices,
@@ -357,6 +361,8 @@ export function generateWhatsAppMessage(
   phoneNumber?: string,
   shopAddress?: string,
   originalPrices?: { [itemId: string]: number },
+  flashSaleStartTime?: string,
+  flashSaleEndTime?: string,
 ): string {
   const name = businessName || "Apni Dukan";
   const today = new Date();
@@ -369,8 +375,19 @@ export function generateWhatsAppMessage(
   let msg = "";
 
   if (flashSale) {
+    const timeOpts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
+    let timeRange = "";
+    if (flashSaleStartTime && flashSaleEndTime) {
+      const startStr = new Date(flashSaleStartTime).toLocaleTimeString("en-IN", timeOpts);
+      const endStr = new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts);
+      timeRange = `${startStr} to ${endStr}`;
+    }
     msg += `\u26A1 *${name} - FLASH SALE!* \u26A1\n`;
-    msg += `\u23F0 _Exclusive prices for next ${flashDuration} ${flashDuration === 1 ? "hour" : "hours"} only!_\n`;
+    if (timeRange) {
+      msg += `\u23F0 _${timeRange} only!_\n`;
+    } else {
+      msg += `\u23F0 _Exclusive prices for next ${flashDuration} ${flashDuration === 1 ? "hour" : "hours"} only!_\n`;
+    }
     msg += `\uD83D\uDCC5 ${dateStr}\n`;
     msg += `\n${"━".repeat(28)}\n\n`;
     msg += `\uD83D\uDD25 *TODAY'S SPECIAL PRICES* \uD83D\uDD25\n\n`;
@@ -402,13 +419,16 @@ export function generateWhatsAppMessage(
   msg += `${"━".repeat(28)}\n\n`;
 
   if (flashSale) {
-    const endTime = new Date(today.getTime() + flashDuration * 60 * 60 * 1000);
-    const endTimeStr = endTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    msg += `\u23F0 *Offer valid till ${endTimeStr}*\n`;
+    const timeOpts2: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
+    if (flashSaleStartTime && flashSaleEndTime) {
+      const startStr = new Date(flashSaleStartTime).toLocaleTimeString("en-IN", timeOpts2);
+      const endStr = new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts2);
+      msg += `\u23F0 *Offer valid: ${startStr} - ${endStr}*\n`;
+    } else {
+      const endTime = new Date(today.getTime() + flashDuration * 60 * 60 * 1000);
+      const endTimeStr = endTime.toLocaleTimeString("en-IN", timeOpts2);
+      msg += `\u23F0 *Offer valid till ${endTimeStr}*\n`;
+    }
     msg += `\u26A1 _Hurry! Limited time offer!_ \u26A1\n\n`;
   }
 

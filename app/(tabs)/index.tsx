@@ -131,6 +131,8 @@ export default function ItemsScreen() {
       settings?.phoneNumber || undefined,
       settings?.shopAddress || undefined,
       flashSaleState?.originalPrices,
+      flashSaleState?.startTime,
+      flashSaleState?.endTime,
     );
 
     const groups = settings?.whatsappGroups || [];
@@ -161,6 +163,8 @@ export default function ItemsScreen() {
       settings?.phoneNumber || undefined,
       settings?.shopAddress || undefined,
       flashSaleState?.originalPrices,
+      flashSaleState?.startTime,
+      flashSaleState?.endTime,
     );
     openWhatsApp(message);
   };
@@ -318,14 +322,23 @@ export default function ItemsScreen() {
           ) : (
             <View style={styles.flashActiveBar}>
               <View style={styles.flashActiveInfo}>
-                <Ionicons name="flash" size={18} color={Colors.white} />
-                <Text style={styles.flashActiveText}>Flash Sale Active</Text>
-                {countdown ? (
-                  <View style={styles.countdownBadge}>
-                    <Ionicons name="time-outline" size={14} color={Colors.flashSale} />
-                    <Text style={styles.countdownText}>{countdown}</Text>
-                  </View>
-                ) : null}
+                <View style={styles.flashActiveTopRow}>
+                  <Ionicons name="flash" size={18} color={Colors.white} />
+                  <Text style={styles.flashActiveText}>Flash Sale Active</Text>
+                  {countdown ? (
+                    <View style={styles.countdownBadge}>
+                      <Ionicons name="time-outline" size={14} color={Colors.flashSale} />
+                      <Text style={styles.countdownText}>{countdown}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                {flashSaleState?.startTime && flashSaleState?.endTime && (
+                  <Text style={styles.flashTimeRange}>
+                    {new Date(flashSaleState.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                    {" - "}
+                    {new Date(flashSaleState.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                  </Text>
+                )}
               </View>
               <Pressable
                 onPress={() => {
@@ -565,15 +578,24 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   flashActiveInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
     flex: 1,
+    gap: 4,
+  },
+  flashActiveTopRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
   },
   flashActiveText: {
     fontSize: 14,
     fontFamily: "Nunito_700Bold",
     color: Colors.white,
+  },
+  flashTimeRange: {
+    fontSize: 12,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.white + "CC",
+    marginLeft: 26,
   },
   countdownBadge: {
     flexDirection: "row",
