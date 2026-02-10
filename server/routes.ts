@@ -1,8 +1,25 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
+import path from "node:path";
+import fs from "node:fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/pay.html", (req: Request, res: Response) => {
+    const staticPayPage = path.join(process.cwd(), "public", "pay.html");
+    if (fs.existsSync(staticPayPage)) {
+      res.sendFile(staticPayPage);
+      return;
+    }
+    res.redirect("/pay?" + new URLSearchParams(req.query as Record<string, string>).toString());
+  });
+
   app.get("/pay", (req: Request, res: Response) => {
+    const staticPayPage = path.join(process.cwd(), "public", "pay.html");
+    if (fs.existsSync(staticPayPage)) {
+      res.sendFile(staticPayPage);
+      return;
+    }
+
     const { pa, pn, am, tn } = req.query;
 
     if (!pa || !am) {

@@ -344,9 +344,16 @@ export function generateUPILink(upiId: string, name: string, amount: number, not
 
 export function generatePaymentPageUrl(upiId: string, name: string, amount: number, note?: string): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
-  if (!domain) return "";
-  const baseUrl = `https://${domain}`;
-  let url = `${baseUrl}/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
+  const ghPagesDomain = process.env.EXPO_PUBLIC_PAYMENT_BASE_URL;
+  let baseUrl = "";
+  if (ghPagesDomain) {
+    baseUrl = ghPagesDomain;
+  } else if (domain) {
+    baseUrl = `https://${domain}`;
+  } else {
+    return "";
+  }
+  let url = `${baseUrl}/pay.html?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${amount.toFixed(2)}`;
   if (note) {
     url += `&tn=${encodeURIComponent(note)}`;
   }
