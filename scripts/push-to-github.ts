@@ -45,7 +45,6 @@ async function getUncachableGitHubClient() {
 
 const REPO_OWNER = 'varun675';
 const REPO_NAME = 'ApniDukan';
-const BRANCH = 'main';
 
 const IGNORE_PATTERNS = [
   'node_modules',
@@ -79,13 +78,10 @@ function shouldIgnore(relativePath: string): boolean {
 function getAllFiles(dirPath: string, basePath: string = dirPath): string[] {
   const files: string[] = [];
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
     const relativePath = path.relative(basePath, fullPath);
-
     if (shouldIgnore(relativePath)) continue;
-
     if (entry.isDirectory()) {
       files.push(...getAllFiles(fullPath, basePath));
     } else if (entry.isFile()) {
@@ -97,8 +93,11 @@ function getAllFiles(dirPath: string, basePath: string = dirPath): string[] {
 
 function isBinaryFile(filePath: string): boolean {
   const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.ttf', '.otf', '.woff', '.woff2', '.eot', '.mp3', '.mp4', '.wav', '.pdf', '.zip', '.tar', '.gz', '.jar'];
-  const ext = path.extname(filePath).toLowerCase();
-  return binaryExtensions.includes(ext);
+  return binaryExtensions.includes(path.extname(filePath).toLowerCase());
+}
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function main() {
@@ -109,113 +108,113 @@ async function main() {
   console.log(`Authenticated as: ${user.data.login}`);
 
   const repo = await octokit.rest.repos.get({ owner: REPO_OWNER, repo: REPO_NAME });
-  console.log(`Repository ${REPO_OWNER}/${REPO_NAME} found (default branch: ${repo.data.default_branch}).`);
+  const defaultBranch = repo.data.default_branch || 'main';
+  console.log(`Repository found. Default branch: ${defaultBranch}`);
 
-  const actualBranch = repo.data.default_branch || BRANCH;
-
-  let parentSha: string | undefined;
+  let latestSha: string | undefined;
   try {
     const ref = await octokit.rest.git.getRef({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      ref: `heads/${actualBranch}`,
+      ref: `heads/${defaultBranch}`,
     });
-    parentSha = ref.data.object.sha;
-    console.log(`Branch '${actualBranch}' found. Latest commit: ${parentSha.substring(0, 7)}`);
-  } catch (e) {
-    console.log(`Branch '${actualBranch}' not found.`);
+    latestSha = ref.data.object.sha;
+    console.log(`Latest commit: ${latestSha.substring(0, 7)}`);
+  } catch {
+    console.log('No commits found on branch.');
   }
 
   const projectDir = process.cwd();
   const files = getAllFiles(projectDir);
-  console.log(`Found ${files.length} files to upload.`);
+  console.log(`Found ${files.length} files to push.\n`);
 
-  const treeItems: { path: string; mode: '100644'; type: 'blob'; content?: string; sha?: string }[] = [];
+  let uploaded = 0;
+  let failed = 0;
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  for (const file of files) {
     const fullPath = path.join(projectDir, file);
     const binary = isBinaryFile(file);
+    const content = binary
+      ? fs.readFileSync(fullPath).toString('base64')
+      : Buffer.from(fs.readFileSync(fullPath, 'utf-8')).toString('base64');
 
-    if (binary) {
-      const content = fs.readFileSync(fullPath).toString('base64');
-      const blob = await octokit.rest.git.createBlob({
+    let existingSha: string | undefined;
+    try {
+      const existing = await octokit.rest.repos.getContent({
         owner: REPO_OWNER,
         repo: REPO_NAME,
-        content,
-        encoding: 'base64',
-      });
-      treeItems.push({
         path: file,
-        mode: '100644',
-        type: 'blob',
-        sha: blob.data.sha,
+        ref: defaultBranch,
       });
-    } else {
-      const content = fs.readFileSync(fullPath, 'utf-8');
-      treeItems.push({
-        path: file,
-        mode: '100644',
-        type: 'blob',
-        content,
-      });
+      if (!Array.isArray(existing.data) && existing.data.type === 'file') {
+        existingSha = existing.data.sha;
+        if (existing.data.content && existing.data.content.replace(/\n/g, '') === content.replace(/\n/g, '')) {
+          uploaded++;
+          continue;
+        }
+      }
+    } catch {
     }
 
-    if ((i + 1) % 20 === 0 || i === files.length - 1) {
-      process.stdout.write(`[${i + 1}/${files.length}]`);
+    try {
+      await octokit.rest.repos.createOrUpdateFileContents({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: file,
+        message: `Update ${file}`,
+        content,
+        sha: existingSha,
+        branch: defaultBranch,
+      });
+      uploaded++;
+      console.log(`[${uploaded}/${files.length}] Updated: ${file}`);
+    } catch (err: any) {
+      if (err.status === 409) {
+        await sleep(1000);
+        try {
+          const fresh = await octokit.rest.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: file,
+            ref: defaultBranch,
+          });
+          const freshSha = !Array.isArray(fresh.data) && fresh.data.type === 'file' ? fresh.data.sha : undefined;
+          await octokit.rest.repos.createOrUpdateFileContents({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: file,
+            message: `Update ${file}`,
+            content,
+            sha: freshSha,
+            branch: defaultBranch,
+          });
+          uploaded++;
+          console.log(`[${uploaded}/${files.length}] Updated (retry): ${file}`);
+        } catch (retryErr: any) {
+          failed++;
+          console.error(`Failed: ${file} - ${retryErr.message}`);
+        }
+      } else {
+        failed++;
+        console.error(`Failed: ${file} - ${err.message}`);
+      }
     }
-  }
-  console.log('\nAll files prepared.');
 
-  console.log('Creating tree...');
-  const tree = await octokit.rest.git.createTree({
-    owner: REPO_OWNER,
-    repo: REPO_NAME,
-    tree: treeItems as any,
-  });
-  console.log(`Tree created: ${tree.data.sha.substring(0, 7)}`);
-
-  const commitParams: any = {
-    owner: REPO_OWNER,
-    repo: REPO_NAME,
-    message: 'Update Apni Dukan - GitHub Pages deployment, payment page, flash sale time range, kg/grams input',
-    tree: tree.data.sha,
-  };
-  if (parentSha) {
-    commitParams.parents = [parentSha];
+    await sleep(200);
   }
 
-  const commit = await octokit.rest.git.createCommit(commitParams);
-  console.log(`Commit created: ${commit.data.sha.substring(0, 7)}`);
-
-  try {
-    await octokit.rest.git.updateRef({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      ref: `heads/${actualBranch}`,
-      sha: commit.data.sha,
-      force: true,
-    });
-    console.log(`Updated branch '${actualBranch}'.`);
-  } catch (e) {
-    await octokit.rest.git.createRef({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      ref: `refs/heads/${actualBranch}`,
-      sha: commit.data.sha,
-    });
-    console.log(`Created branch '${actualBranch}'.`);
+  console.log(`\nDone! ${uploaded} files uploaded, ${failed} failed.`);
+  console.log(`View at: https://github.com/${REPO_OWNER}/${REPO_NAME}`);
+  if (failed === 0) {
+    console.log(`GitHub Actions will auto-deploy to https://${REPO_OWNER}.github.io/${REPO_NAME}/`);
   }
-
-  console.log(`\nSuccess! Code pushed to https://github.com/${REPO_OWNER}/${REPO_NAME}`);
-  console.log(`GitHub Actions will auto-deploy to https://${REPO_OWNER}.github.io/${REPO_NAME}/`);
 }
 
 main().catch(err => {
   console.error('Push failed:', err.message || err);
   if (err.response) {
-    console.error('Response status:', err.response.status);
-    console.error('Response data:', JSON.stringify(err.response.data, null, 2));
+    console.error('Status:', err.response.status);
+    console.error('Data:', JSON.stringify(err.response.data, null, 2));
   }
   process.exit(1);
 });
