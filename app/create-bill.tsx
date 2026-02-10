@@ -30,6 +30,7 @@ export default function CreateBillScreen() {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Map<string, string>>(new Map());
+  const [kgValues, setKgValues] = useState<Map<string, { kg: string; grams: string }>>(new Map());
   const [customerName, setCustomerName] = useState("");
   const [flatNumber, setFlatNumber] = useState("");
   const [step, setStep] = useState<"items" | "details">("details");
@@ -47,11 +48,20 @@ export default function CreateBillScreen() {
   };
 
   const toggleItem = (id: string) => {
+    const item = items.find((i) => i.id === id);
     const newSelected = new Map(selected);
     if (newSelected.has(id)) {
       newSelected.delete(id);
+      const newKg = new Map(kgValues);
+      newKg.delete(id);
+      setKgValues(newKg);
     } else {
       newSelected.set(id, "1");
+      if (item?.pricingType === "per_kg") {
+        const newKg = new Map(kgValues);
+        newKg.set(id, { kg: "1", grams: "0" });
+        setKgValues(newKg);
+      }
     }
     setSelected(newSelected);
     if (Platform.OS !== "web") Haptics.selectionAsync();
@@ -63,11 +73,33 @@ export default function CreateBillScreen() {
     setSelected(newSelected);
   };
 
+  const updateKgGrams = (id: string, field: "kg" | "grams", value: string) => {
+    const newKg = new Map(kgValues);
+    const current = newKg.get(id) || { kg: "0", grams: "0" };
+    newKg.set(id, { ...current, [field]: value });
+    setKgValues(newKg);
+    const updated = newKg.get(id)!;
+    const kgNum = parseFloat(updated.kg) || 0;
+    const gramsNum = parseFloat(updated.grams) || 0;
+    const totalKg = kgNum + gramsNum / 1000;
+    const newSelected = new Map(selected);
+    newSelected.set(id, totalKg.toString());
+    setSelected(newSelected);
+  };
+
   const getSelectedItems = (): BillItem[] => {
     return items
       .filter((item) => selected.has(item.id))
       .map((item) => {
-        const qty = parseFloat(selected.get(item.id) || "1") || 1;
+        let qty: number;
+        if (item.pricingType === "per_kg" && kgValues.has(item.id)) {
+          const kv = kgValues.get(item.id)!;
+          const kgNum = parseFloat(kv.kg) || 0;
+          const gramsNum = parseFloat(kv.grams) || 0;
+          qty = kgNum + gramsNum / 1000;
+        } else {
+          qty = parseFloat(selected.get(item.id) || "1") || 1;
+        }
         return {
           itemId: item.id,
           name: item.name,
@@ -143,13 +175,45 @@ export default function CreateBillScreen() {
             </View>
           </View>
         </Pressable>
-        {isSelected && (
+        {isSelected && item.pricingType === "per_kg" && (
+          <View style={styles.qtyRow}>
+            <View style={styles.kgGramsRow}>
+              <View style={styles.kgGramsGroup}>
+                <TextInput
+                  style={styles.kgGramsInput}
+                  keyboardType="numeric"
+                  value={kgValues.get(item.id)?.kg || "0"}
+                  onChangeText={(t) => updateKgGrams(item.id, "kg", t)}
+                  selectTextOnFocus
+                />
+                <Text style={styles.kgGramsLabel}>Kg</Text>
+              </View>
+              <View style={styles.kgGramsGroup}>
+                <TextInput
+                  style={styles.kgGramsInput}
+                  keyboardType="numeric"
+                  value={kgValues.get(item.id)?.grams || "0"}
+                  onChangeText={(t) => updateKgGrams(item.id, "grams", t)}
+                  selectTextOnFocus
+                />
+                <Text style={styles.kgGramsLabel}>gm</Text>
+              </View>
+            </View>
+            <Text style={styles.lineTotal}>
+              = {formatCurrencyShort(item.price * (
+                (parseFloat(kgValues.get(item.id)?.kg || "0") || 0) +
+                (parseFloat(kgValues.get(item.id)?.grams || "0") || 0) / 1000
+              ))}
+            </Text>
+          </View>
+        )}
+        {isSelected && item.pricingType !== "per_kg" && (
           <View style={styles.qtyRow}>
             <Text style={styles.qtyLabel}>Qty:</Text>
             <Pressable
               onPress={() => {
                 const current = parseFloat(qty) || 1;
-                if (current > 0.5) updateQty(item.id, (current - 0.5).toString());
+                if (current > 1) updateQty(item.id, (current - 1).toString());
               }}
               style={styles.qtyBtn}
             >
@@ -164,7 +228,7 @@ export default function CreateBillScreen() {
             <Pressable
               onPress={() => {
                 const current = parseFloat(qty) || 0;
-                updateQty(item.id, (current + 0.5).toString());
+                updateQty(item.id, (current + 1).toString());
               }}
               style={styles.qtyBtn}
             >
@@ -445,6 +509,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 12,
     gap: 8,
+  },
+  kgGramsRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  kgGramsGroup: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  kgGramsInput: {
+    width: 52,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceElevated,
+    textAlign: "center" as const,
+    fontSize: 15,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.text,
+  },
+  kgGramsLabel: {
+    fontSize: 13,
+    fontFamily: "Nunito_600SemiBold",
+    color: Colors.textSecondary,
   },
   qtyLabel: {
     fontSize: 13,
