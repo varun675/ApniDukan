@@ -389,7 +389,7 @@ export function generateWhatsAppMessage(
 
     msg += `${idx + 1}. *${item.name}*\n`;
     if (hasPriceChanged) {
-      msg += `   ~${formatCurrencyShort(origPrice)}${priceLabel}~  \u27A1  \uD83D\uDCB0 *${price}${priceLabel}*`;
+      msg += `   ~~${formatCurrencyShort(origPrice)}${priceLabel}~~  \u27A1  \uD83D\uDCB0 *${price}${priceLabel}*`;
     } else {
       msg += `   \uD83D\uDCB0 ${price}${priceLabel}`;
     }
