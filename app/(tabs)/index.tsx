@@ -130,6 +130,7 @@ export default function ItemsScreen() {
       flashDuration,
       settings?.phoneNumber || undefined,
       settings?.shopAddress || undefined,
+      flashSaleState?.originalPrices,
     );
 
     const groups = settings?.whatsappGroups || [];
@@ -159,6 +160,7 @@ export default function ItemsScreen() {
       flashDuration,
       settings?.phoneNumber || undefined,
       settings?.shopAddress || undefined,
+      flashSaleState?.originalPrices,
     );
     openWhatsApp(message);
   };

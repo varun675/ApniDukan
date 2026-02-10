@@ -356,6 +356,7 @@ export function generateWhatsAppMessage(
   flashDuration: number,
   phoneNumber?: string,
   shopAddress?: string,
+  originalPrices?: { [itemId: string]: number },
 ): string {
   const name = businessName || "Apni Dukan";
   const today = new Date();
@@ -383,8 +384,15 @@ export function generateWhatsAppMessage(
   items.forEach((item, idx) => {
     const priceLabel = getPricingLabel(item.pricingType);
     const price = formatCurrencyShort(item.price);
+    const origPrice = originalPrices?.[item.id];
+    const hasPriceChanged = flashSale && origPrice !== undefined && origPrice !== item.price;
+
     msg += `${idx + 1}. *${item.name}*\n`;
-    msg += `   \uD83D\uDCB0 ${price}${priceLabel}`;
+    if (hasPriceChanged) {
+      msg += `   ~${formatCurrencyShort(origPrice)}${priceLabel}~  \u27A1  \uD83D\uDCB0 *${price}${priceLabel}*`;
+    } else {
+      msg += `   \uD83D\uDCB0 ${price}${priceLabel}`;
+    }
     if (item.quantity) {
       msg += `  |  \uD83D\uDCE6 ${item.quantity} available`;
     }
