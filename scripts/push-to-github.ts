@@ -58,6 +58,12 @@ const IGNORE_PATTERNS = [
   '__pycache__',
   '.DS_Store',
   'Thumbs.db',
+  '.replit',
+  '.config',
+  'generated-icon.png',
+  'replit.nix',
+  '.upm',
+  'tmp',
 ];
 
 function shouldIgnore(relativePath: string): boolean {
@@ -90,7 +96,7 @@ function getAllFiles(dirPath: string, basePath: string = dirPath): string[] {
 }
 
 function isBinaryFile(filePath: string): boolean {
-  const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.svg', '.ttf', '.otf', '.woff', '.woff2', '.eot', '.mp3', '.mp4', '.wav', '.pdf', '.zip', '.tar', '.gz', '.jar'];
+  const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.ttf', '.otf', '.woff', '.woff2', '.eot', '.mp3', '.mp4', '.wav', '.pdf', '.zip', '.tar', '.gz', '.jar'];
   const ext = path.extname(filePath).toLowerCase();
   return binaryExtensions.includes(ext);
 }
@@ -102,92 +108,77 @@ async function main() {
   const user = await octokit.rest.users.getAuthenticated();
   console.log(`Authenticated as: ${user.data.login}`);
 
-  let repoExists = false;
-  try {
-    await octokit.rest.repos.get({ owner: REPO_OWNER, repo: REPO_NAME });
-    repoExists = true;
-    console.log(`Repository ${REPO_OWNER}/${REPO_NAME} exists.`);
-  } catch (e: any) {
-    if (e.status === 404) {
-      console.log(`Repository not found. Creating ${REPO_OWNER}/${REPO_NAME}...`);
-      await octokit.rest.repos.createForAuthenticatedUser({
-        name: REPO_NAME,
-        description: 'Apni Dukan - Mobile grocery shop management app by Codesmotech Consulting Pvt Ltd',
-        private: false,
-        auto_init: false,
-      });
-      console.log('Repository created.');
-    } else {
-      throw e;
-    }
-  }
+  const repo = await octokit.rest.repos.get({ owner: REPO_OWNER, repo: REPO_NAME });
+  console.log(`Repository ${REPO_OWNER}/${REPO_NAME} found (default branch: ${repo.data.default_branch}).`);
 
-  const projectDir = process.cwd();
-  const files = getAllFiles(projectDir);
-  console.log(`Found ${files.length} files to push.`);
-
-  const treeItems: any[] = [];
-
-  for (const file of files) {
-    const fullPath = path.join(projectDir, file);
-    const binary = isBinaryFile(file);
-
-    if (binary) {
-      const content = fs.readFileSync(fullPath);
-      const blob = await octokit.rest.git.createBlob({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        content: content.toString('base64'),
-        encoding: 'base64',
-      });
-      treeItems.push({
-        path: file,
-        mode: '100644' as const,
-        type: 'blob' as const,
-        sha: blob.data.sha,
-      });
-    } else {
-      const content = fs.readFileSync(fullPath, 'utf-8');
-      const blob = await octokit.rest.git.createBlob({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        content: content,
-        encoding: 'utf-8',
-      });
-      treeItems.push({
-        path: file,
-        mode: '100644' as const,
-        type: 'blob' as const,
-        sha: blob.data.sha,
-      });
-    }
-    process.stdout.write('.');
-  }
-  console.log('\nAll blobs created.');
-
-  const tree = await octokit.rest.git.createTree({
-    owner: REPO_OWNER,
-    repo: REPO_NAME,
-    tree: treeItems,
-  });
-  console.log('Tree created.');
+  const actualBranch = repo.data.default_branch || BRANCH;
 
   let parentSha: string | undefined;
   try {
     const ref = await octokit.rest.git.getRef({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      ref: `heads/${BRANCH}`,
+      ref: `heads/${actualBranch}`,
     });
     parentSha = ref.data.object.sha;
+    console.log(`Branch '${actualBranch}' found. Latest commit: ${parentSha.substring(0, 7)}`);
   } catch (e) {
-    // No existing branch
+    console.log(`Branch '${actualBranch}' not found.`);
   }
+
+  const projectDir = process.cwd();
+  const files = getAllFiles(projectDir);
+  console.log(`Found ${files.length} files to upload.`);
+
+  const treeItems: { path: string; mode: '100644'; type: 'blob'; content?: string; sha?: string }[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const fullPath = path.join(projectDir, file);
+    const binary = isBinaryFile(file);
+
+    if (binary) {
+      const content = fs.readFileSync(fullPath).toString('base64');
+      const blob = await octokit.rest.git.createBlob({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        content,
+        encoding: 'base64',
+      });
+      treeItems.push({
+        path: file,
+        mode: '100644',
+        type: 'blob',
+        sha: blob.data.sha,
+      });
+    } else {
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      treeItems.push({
+        path: file,
+        mode: '100644',
+        type: 'blob',
+        content,
+      });
+    }
+
+    if ((i + 1) % 20 === 0 || i === files.length - 1) {
+      process.stdout.write(`[${i + 1}/${files.length}]`);
+    }
+  }
+  console.log('\nAll files prepared.');
+
+  console.log('Creating tree...');
+  const tree = await octokit.rest.git.createTree({
+    owner: REPO_OWNER,
+    repo: REPO_NAME,
+    tree: treeItems as any,
+  });
+  console.log(`Tree created: ${tree.data.sha.substring(0, 7)}`);
 
   const commitParams: any = {
     owner: REPO_OWNER,
     repo: REPO_NAME,
-    message: 'Update Apni Dukan - static GitHub Pages deployment with payment page, flash sale time range, and kg/grams input',
+    message: 'Update Apni Dukan - GitHub Pages deployment, payment page, flash sale time range, kg/grams input',
     tree: tree.data.sha,
   };
   if (parentSha) {
@@ -195,32 +186,36 @@ async function main() {
   }
 
   const commit = await octokit.rest.git.createCommit(commitParams);
-  console.log(`Commit created: ${commit.data.sha}`);
+  console.log(`Commit created: ${commit.data.sha.substring(0, 7)}`);
 
   try {
     await octokit.rest.git.updateRef({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      ref: `heads/${BRANCH}`,
+      ref: `heads/${actualBranch}`,
       sha: commit.data.sha,
       force: true,
     });
-    console.log(`Updated branch ${BRANCH}.`);
+    console.log(`Updated branch '${actualBranch}'.`);
   } catch (e) {
     await octokit.rest.git.createRef({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      ref: `refs/heads/${BRANCH}`,
+      ref: `refs/heads/${actualBranch}`,
       sha: commit.data.sha,
     });
-    console.log(`Created branch ${BRANCH}.`);
+    console.log(`Created branch '${actualBranch}'.`);
   }
 
-  console.log(`\nDone! Code pushed to https://github.com/${REPO_OWNER}/${REPO_NAME}`);
+  console.log(`\nSuccess! Code pushed to https://github.com/${REPO_OWNER}/${REPO_NAME}`);
   console.log(`GitHub Actions will auto-deploy to https://${REPO_OWNER}.github.io/${REPO_NAME}/`);
 }
 
 main().catch(err => {
-  console.error('Error:', err.message || err);
+  console.error('Push failed:', err.message || err);
+  if (err.response) {
+    console.error('Response status:', err.response.status);
+    console.error('Response data:', JSON.stringify(err.response.data, null, 2));
+  }
   process.exit(1);
 });
