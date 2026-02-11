@@ -10,6 +10,10 @@ import {
   Linking,
   RefreshControl,
   Modal,
+  ScrollView,
+  Dimensions,
+  Animated as RNAnimated,
+  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -34,6 +38,122 @@ import {
 } from "@/lib/storage";
 
 const FLASH_DURATIONS = [1, 2, 3, 4, 5, 6];
+const DELETE_THRESHOLD = -80;
+
+function SwipeableItem({
+  item,
+  index,
+  flashSaleState,
+  onEdit,
+  onDelete,
+}: {
+  item: Item;
+  index: number;
+  flashSaleState: FlashSaleState | null;
+  onEdit: (item: Item) => void;
+  onDelete: (item: Item) => void;
+}) {
+  const translateX = useRef(new RNAnimated.Value(0)).current;
+  const isSwipedRef = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 20;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) {
+          translateX.setValue(Math.max(gestureState.dx, -120));
+        } else if (isSwipedRef.current) {
+          translateX.setValue(Math.min(gestureState.dx + DELETE_THRESHOLD, 0));
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < DELETE_THRESHOLD) {
+          RNAnimated.spring(translateX, { toValue: DELETE_THRESHOLD, useNativeDriver: false }).start();
+          isSwipedRef.current = true;
+        } else {
+          RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+          isSwipedRef.current = false;
+        }
+      },
+    })
+  ).current;
+
+  const resetSwipe = () => {
+    RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+    isSwipedRef.current = false;
+  };
+
+  const originalPrice = flashSaleState?.originalPrices?.[item.id] ?? null;
+  const isPriceChanged = originalPrice !== null && originalPrice !== item.price;
+
+  return (
+    <View style={styles.itemRow}>
+      <View style={styles.itemNumber}>
+        <Text style={styles.itemNumberText}>{index + 1}</Text>
+      </View>
+      <View style={{ flex: 1, overflow: "hidden" as const, borderRadius: 14 }}>
+        <View style={styles.deleteBackground}>
+          <Pressable
+            style={styles.deleteBgBtn}
+            onPress={() => {
+              resetSwipe();
+              onDelete(item);
+            }}
+          >
+            <Ionicons name="trash" size={22} color={Colors.white} />
+            <Text style={styles.deleteBgText}>Delete</Text>
+          </Pressable>
+        </View>
+        <RNAnimated.View
+          style={{ transform: [{ translateX }] }}
+          {...panResponder.panHandlers}
+        >
+          <Pressable
+            style={({ pressed }) => [
+              styles.itemCard,
+              pressed && styles.itemCardPressed,
+              flashSaleState && styles.itemCardFlash,
+            ]}
+            onPress={() => onEdit(item)}
+          >
+            <View style={styles.itemMainInfo}>
+              <Text style={styles.itemName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.quantity ? (
+                <Text style={styles.itemQty}>{item.quantity} available</Text>
+              ) : null}
+            </View>
+            <View style={styles.itemPriceBox}>
+              {isPriceChanged && (
+                <Text style={styles.originalPrice}>
+                  {formatCurrencyShort(originalPrice)}
+                </Text>
+              )}
+              <Text
+                style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}
+              >
+                {formatCurrencyShort(item.price)}
+              </Text>
+              <Text style={styles.itemUnit}>
+                {getPricingLabel(item.pricingType)}
+              </Text>
+            </View>
+            <View style={styles.swipeHint}>
+              <Ionicons
+                name="chevron-back"
+                size={14}
+                color={Colors.textLight}
+              />
+            </View>
+          </Pressable>
+        </RNAnimated.View>
+      </View>
+    </View>
+  );
+}
 
 export default function ItemsScreen() {
   const insets = useSafeAreaInsets();
@@ -178,53 +298,19 @@ export default function ItemsScreen() {
     }
   };
 
-  const getOriginalPrice = (itemId: string): number | null => {
-    if (!flashSaleState || flashSaleState.originalPrices[itemId] === undefined) return null;
-    return flashSaleState.originalPrices[itemId];
+  const handleEdit = (item: Item) => {
+    router.push({ pathname: "/add-item", params: { editId: item.id } });
   };
 
-  const renderItem = ({ item, index }: { item: Item; index: number }) => {
-    const originalPrice = getOriginalPrice(item.id);
-    const isPriceChanged = originalPrice !== null && originalPrice !== item.price;
-
-    return (
-      <View style={styles.itemRow}>
-        <View style={styles.itemNumber}>
-          <Text style={styles.itemNumberText}>{index + 1}</Text>
-        </View>
-        <Pressable
-          style={({ pressed }) => [styles.itemCard, pressed && styles.itemCardPressed, flashSaleState && styles.itemCardFlash]}
-          onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
-          onLongPress={() => handleDelete(item)}
-        >
-          <View style={styles.itemMainInfo}>
-            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            {item.quantity ? (
-              <Text style={styles.itemQty}>{item.quantity} available</Text>
-            ) : null}
-          </View>
-          <View style={styles.itemPriceBox}>
-            {isPriceChanged && (
-              <Text style={styles.originalPrice}>{formatCurrencyShort(originalPrice)}</Text>
-            )}
-            <Text style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}>{formatCurrencyShort(item.price)}</Text>
-            <Text style={styles.itemUnit}>{getPricingLabel(item.pricingType)}</Text>
-          </View>
-          <View style={styles.itemActions}>
-            <Pressable
-              onPress={() => router.push({ pathname: "/add-item", params: { editId: item.id } })}
-              hitSlop={8}
-            >
-              <Ionicons name="create-outline" size={18} color={Colors.textSecondary} />
-            </Pressable>
-            <Pressable onPress={() => handleDelete(item)} hitSlop={8}>
-              <Ionicons name="trash-outline" size={18} color={Colors.error} />
-            </Pressable>
-          </View>
-        </Pressable>
-      </View>
-    );
-  };
+  const renderItem = ({ item, index }: { item: Item; index: number }) => (
+    <SwipeableItem
+      item={item}
+      index={index}
+      flashSaleState={flashSaleState}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+    />
+  );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -379,8 +465,12 @@ export default function ItemsScreen() {
         contentContainerStyle={[
           styles.listContent,
           items.length === 0 && styles.listContentEmpty,
+          items.length > 0 && { paddingBottom: Platform.OS === "web" ? 160 : insets.bottom + 140 },
         ]}
         ListEmptyComponent={renderEmpty}
+        ListHeaderComponent={items.length > 0 ? (
+          <Text style={styles.swipeHintText}>Swipe left on any item to delete</Text>
+        ) : null}
         ListFooterComponent={() => items.length > 0 ? (
           <View style={styles.poweredByContainer}>
             <Text style={styles.poweredByText}>Powered by</Text>
@@ -394,7 +484,7 @@ export default function ItemsScreen() {
       />
 
       {items.length > 0 && (
-        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 10) + 60 }]}>
           <Pressable
             style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
             onPress={shareToWhatsApp}
@@ -637,9 +727,44 @@ const styles = StyleSheet.create({
   flashPrice: {
     color: Colors.flashSale,
   },
+  swipeHintText: {
+    fontSize: 11,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    textAlign: "center",
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  deleteBackground: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: Colors.error,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteBgBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 80,
+    height: "100%",
+  },
+  deleteBgText: {
+    fontSize: 11,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+    marginTop: 2,
+  },
+  swipeHint: {
+    marginLeft: 4,
+    opacity: 0.3,
+  },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 140,
   },
   listContentEmpty: {
     flex: 1,
@@ -709,10 +834,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Nunito_400Regular",
     color: Colors.textSecondary,
-  },
-  itemActions: {
-    flexDirection: "row",
-    gap: 12,
   },
   bottomBar: {
     position: "absolute",
