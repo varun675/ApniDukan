@@ -122,7 +122,7 @@ export default function SettingsScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+      <View style={{ flex: 1 }} onStartShouldSetResponder={() => { Keyboard.dismiss(); return false; }}>
         <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Settings</Text>
@@ -304,7 +304,7 @@ export default function SettingsScreen() {
           </View>
           </ScrollView>
         </View>
-      </Pressable>
+      </View>
     </KeyboardAvoidingView>
   );
 }

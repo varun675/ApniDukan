@@ -377,7 +377,7 @@ export default function CreateBillScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+        <View style={{ flex: 1 }} onStartShouldSetResponder={() => { Keyboard.dismiss(); return false; }}>
           <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
             <View style={styles.topBar}>
               <Pressable onPress={() => router.back()} style={styles.closeBtn}>
@@ -422,7 +422,7 @@ export default function CreateBillScreen() {
               </Pressable>
             </View>
           </View>
-        </Pressable>
+        </View>
       </KeyboardAvoidingView>
     );
   }
