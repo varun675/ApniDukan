@@ -284,15 +284,16 @@ export default function ItemsPage() {
         )}
       </div>
 
-      <div style={styles.footer}>
-        <span style={styles.poweredBy}>Powered by Codesmotech Consulting Pvt Ltd</span>
-      </div>
-
-      <div style={styles.bottomBar}>
-        <button style={styles.whatsappButton} onClick={handleShare}>
-          <IoLogoWhatsapp size={22} color={Colors.white} />
-          <span style={styles.whatsappButtonText}>Share on WhatsApp</span>
-        </button>
+      <div style={styles.bottomSection}>
+        <div style={styles.footer}>
+          <span style={styles.poweredBy}>Powered by Codesmotech Consulting Pvt Ltd</span>
+        </div>
+        <div style={styles.bottomBar}>
+          <button style={styles.whatsappButton} onClick={handleShare}>
+            <IoLogoWhatsapp size={22} color={Colors.white} />
+            <span style={styles.whatsappButtonText}>Share on WhatsApp</span>
+          </button>
+        </div>
       </div>
 
       {showShareModal && (
@@ -635,7 +636,7 @@ const styles: Record<string, React.CSSProperties> = {
     transition: "background-color 0.15s ease",
   },
   footer: {
-    padding: "8px 16px",
+    padding: "6px 16px 0",
     textAlign: "center",
   },
   poweredBy: {
@@ -644,10 +645,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Nunito', sans-serif",
     fontWeight: 400,
   },
-  bottomBar: {
-    padding: "12px 16px",
-    borderTop: `1px solid ${Colors.borderLight}`,
+  bottomSection: {
+    flexShrink: 0,
     backgroundColor: Colors.surface,
+    borderTop: `1px solid ${Colors.borderLight}`,
+  },
+  bottomBar: {
+    padding: "8px 16px 12px",
   },
   whatsappButton: {
     display: "flex",
