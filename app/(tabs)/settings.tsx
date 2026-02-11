@@ -8,6 +8,7 @@ import {
   Pressable,
   Alert,
   Platform,
+  Keyboard,
   KeyboardAvoidingView,
   Image,
 } from "react-native";
@@ -121,18 +122,19 @@ export default function SettingsScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>Apni Dukan configuration</Text>
-        </View>
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+        <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <Text style={styles.headerSubtitle}>Apni Dukan configuration</Text>
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="storefront-outline" size={20} color={Colors.primary} />
@@ -300,8 +302,9 @@ export default function SettingsScreen() {
             <Text style={styles.poweredByText}>Powered by</Text>
             <Text style={styles.poweredByCompany}>Codesmotech Consulting Pvt Ltd</Text>
           </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

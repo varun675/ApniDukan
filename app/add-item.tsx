@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Platform,
+  Keyboard,
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
@@ -88,21 +89,22 @@ export default function AddItemScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color={Colors.text} />
-          </Pressable>
-          <Text style={styles.topBarTitle}>{isEditing ? "Edit Item" : "Add Item"}</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+        <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+          <View style={styles.topBar}>
+            <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </Pressable>
+            <Text style={styles.topBarTitle}>{isEditing ? "Edit Item" : "Add Item"}</Text>
+            <View style={{ width: 40 }} />
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.iconHeader}>
             <View style={styles.iconCircle}>
               <Ionicons name="pricetag" size={32} color={Colors.primary} />
@@ -211,7 +213,8 @@ export default function AddItemScreen() {
             <Text style={styles.saveBtnText}>{isEditing ? "Update Item" : "Add Item"}</Text>
           </Pressable>
         </View>
-      </View>
+        </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  Keyboard,
   KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -128,10 +129,11 @@ export default function AccountsScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Daily Accounts</Text>
-        </View>
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+        <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Daily Accounts</Text>
+          </View>
 
         <View style={styles.dateNav}>
           <Pressable onPress={() => navigateDate(-1)} style={styles.dateArrow}>
@@ -281,8 +283,9 @@ export default function AccountsScreen() {
             <Text style={styles.poweredByText}>Powered by</Text>
             <Text style={styles.poweredByCompany}>Codesmotech Consulting Pvt Ltd</Text>
           </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }

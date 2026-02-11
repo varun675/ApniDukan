@@ -8,6 +8,7 @@ import {
   Pressable,
   Alert,
   Platform,
+  Keyboard,
   KeyboardAvoidingView,
   Animated as RNAnimated,
   PanResponder,
@@ -376,50 +377,52 @@ export default function CreateBillScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-          <View style={styles.topBar}>
-            <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color={Colors.text} />
-            </Pressable>
-            <Text style={styles.topBarTitle}>New Bill</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          <View style={styles.detailsForm}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Customer Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter customer name"
-                placeholderTextColor={Colors.textLight}
-                value={customerName}
-                onChangeText={setCustomerName}
-                autoFocus
-              />
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+          <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+            <View style={styles.topBar}>
+              <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </Pressable>
+              <Text style={styles.topBarTitle}>New Bill</Text>
+              <View style={{ width: 40 }} />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Flat Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. A-101, B-204"
-                placeholderTextColor={Colors.textLight}
-                value={flatNumber}
-                onChangeText={setFlatNumber}
-              />
+            <View style={styles.detailsForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Customer Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter customer name"
+                  placeholderTextColor={Colors.textLight}
+                  value={customerName}
+                  onChangeText={setCustomerName}
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Flat Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. A-101, B-204"
+                  placeholderTextColor={Colors.textLight}
+                  value={flatNumber}
+                  onChangeText={setFlatNumber}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
+              <Pressable
+                style={({ pressed }) => [styles.nextBtn, pressed && styles.nextBtnPressed]}
+                onPress={handleNext}
+              >
+                <Text style={styles.nextBtnText}>Select Items</Text>
+                <Ionicons name="arrow-forward" size={20} color={Colors.white} />
+              </Pressable>
             </View>
           </View>
-
-          <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
-            <Pressable
-              style={({ pressed }) => [styles.nextBtn, pressed && styles.nextBtnPressed]}
-              onPress={handleNext}
-            >
-              <Text style={styles.nextBtnText}>Select Items</Text>
-              <Ionicons name="arrow-forward" size={20} color={Colors.white} />
-            </Pressable>
-          </View>
-        </View>
+        </Pressable>
       </KeyboardAvoidingView>
     );
   }
