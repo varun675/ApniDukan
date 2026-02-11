@@ -55,11 +55,12 @@ function SwipeableItem({
 }) {
   const translateX = useRef(new RNAnimated.Value(0)).current;
   const isSwipedRef = useRef(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 20;
+        return Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dy) < 15;
       },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dx < 0) {
@@ -72,9 +73,11 @@ function SwipeableItem({
         if (gestureState.dx < DELETE_THRESHOLD) {
           RNAnimated.spring(translateX, { toValue: DELETE_THRESHOLD, useNativeDriver: false }).start();
           isSwipedRef.current = true;
+          setShowDelete(true);
         } else {
           RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
           isSwipedRef.current = false;
+          setShowDelete(false);
         }
       },
     })
@@ -83,6 +86,7 @@ function SwipeableItem({
   const resetSwipe = () => {
     RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
     isSwipedRef.current = false;
+    setShowDelete(false);
   };
 
   const originalPrice = flashSaleState?.originalPrices?.[item.id] ?? null;
@@ -94,18 +98,6 @@ function SwipeableItem({
         <Text style={styles.itemNumberText}>{index + 1}</Text>
       </View>
       <View style={{ flex: 1, overflow: "hidden" as const, borderRadius: 14 }}>
-        <View style={styles.deleteBackground}>
-          <Pressable
-            style={styles.deleteBgBtn}
-            onPress={() => {
-              resetSwipe();
-              onDelete(item);
-            }}
-          >
-            <Ionicons name="trash" size={22} color={Colors.white} />
-            <Text style={styles.deleteBgText}>Delete</Text>
-          </Pressable>
-        </View>
         <RNAnimated.View
           style={{ transform: [{ translateX }] }}
           {...panResponder.panHandlers}
@@ -116,7 +108,13 @@ function SwipeableItem({
               pressed && styles.itemCardPressed,
               flashSaleState && styles.itemCardFlash,
             ]}
-            onPress={() => onEdit(item)}
+            onPress={() => {
+              if (isSwipedRef.current) {
+                resetSwipe();
+              } else {
+                onEdit(item);
+              }
+            }}
           >
             <View style={styles.itemMainInfo}>
               <Text style={styles.itemName} numberOfLines={1}>
@@ -150,6 +148,19 @@ function SwipeableItem({
             </View>
           </Pressable>
         </RNAnimated.View>
+        {showDelete && (
+          <Pressable
+            style={styles.deleteOverlay}
+            onPress={() => {
+              resetSwipe();
+              onDelete(item);
+            }}
+            testID="delete-item-btn"
+          >
+            <Ionicons name="trash" size={22} color={Colors.white} />
+            <Text style={styles.deleteBgText}>Delete</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -221,19 +232,27 @@ export default function ItemsScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = (item: Item) => {
-    Alert.alert("Delete Item", `Remove "${item.name}" from your list?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteItem(item.id);
-          if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadData();
+  const handleDelete = async (item: Item) => {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`Remove "${item.name}" from your list?`);
+      if (confirmed) {
+        await deleteItem(item.id);
+        loadData();
+      }
+    } else {
+      Alert.alert("Delete Item", `Remove "${item.name}" from your list?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteItem(item.id);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            loadData();
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const shareToWhatsApp = async () => {
@@ -735,23 +754,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     opacity: 0.7,
   },
-  deleteBackground: {
+  deleteOverlay: {
     position: "absolute",
     right: 0,
     top: 0,
     bottom: 0,
-    width: 100,
-    backgroundColor: Colors.error,
+    width: 80,
+    backgroundColor: "#FF3B30",
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-  },
-  deleteBgBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 80,
-    height: "100%",
+    zIndex: 10,
+    gap: 4,
   },
   deleteBgText: {
     fontSize: 11,

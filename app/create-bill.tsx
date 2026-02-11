@@ -40,11 +40,12 @@ function SwipeableBillItem({
 }) {
   const translateX = useRef(new RNAnimated.Value(0)).current;
   const isSwipedRef = useRef(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 20;
+        return Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dy) < 15;
       },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dx < 0) {
@@ -57,9 +58,11 @@ function SwipeableBillItem({
         if (gestureState.dx < DELETE_THRESHOLD) {
           RNAnimated.spring(translateX, { toValue: DELETE_THRESHOLD, useNativeDriver: false }).start();
           isSwipedRef.current = true;
+          setShowDelete(true);
         } else {
           RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
           isSwipedRef.current = false;
+          setShowDelete(false);
         }
       },
     })
@@ -68,51 +71,48 @@ function SwipeableBillItem({
   const resetSwipe = () => {
     RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
     isSwipedRef.current = false;
+    setShowDelete(false);
   };
 
   return (
     <View style={{ overflow: "hidden" as const, borderRadius: 14, marginBottom: 10 }}>
-      <View style={billSwipeStyles.deleteBackground}>
-        <Pressable
-          style={billSwipeStyles.deleteBgBtn}
-          onPress={() => {
-            resetSwipe();
-            onDelete();
-          }}
-        >
-          <Ionicons name="trash" size={22} color={Colors.white} />
-          <Text style={billSwipeStyles.deleteBgText}>Delete</Text>
-        </Pressable>
-      </View>
       <RNAnimated.View
         style={{ transform: [{ translateX }] }}
         {...panResponder.panHandlers}
       >
         {children}
       </RNAnimated.View>
+      {showDelete && (
+        <Pressable
+          style={billSwipeStyles.deleteOverlay}
+          onPress={() => {
+            resetSwipe();
+            onDelete();
+          }}
+          testID="delete-bill-item-btn"
+        >
+          <Ionicons name="trash" size={22} color={Colors.white} />
+          <Text style={billSwipeStyles.deleteBgText}>Delete</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const billSwipeStyles = StyleSheet.create({
-  deleteBackground: {
+  deleteOverlay: {
     position: "absolute",
     right: 0,
     top: 0,
     bottom: 0,
-    width: 100,
+    width: 80,
     backgroundColor: "#FF3B30",
-    justifyContent: "center",
-    alignItems: "center",
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-  },
-  deleteBgBtn: {
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
     gap: 4,
-    width: "100%",
-    height: "100%",
   },
   deleteBgText: {
     fontSize: 11,
@@ -224,25 +224,34 @@ export default function CreateBillScreen() {
     setStep("items");
   };
 
-  const handleDeleteItem = (item: Item) => {
-    Alert.alert("Delete Item", `Remove "${item.name}" from your catalog?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          const newSelected = new Map(selected);
-          newSelected.delete(item.id);
-          setSelected(newSelected);
-          const newKg = new Map(kgValues);
-          newKg.delete(item.id);
-          setKgValues(newKg);
-          await deleteItem(item.id);
-          if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadItems();
+  const handleDeleteItem = async (item: Item) => {
+    const doDelete = async () => {
+      const newSelected = new Map(selected);
+      newSelected.delete(item.id);
+      setSelected(newSelected);
+      const newKg = new Map(kgValues);
+      newKg.delete(item.id);
+      setKgValues(newKg);
+      await deleteItem(item.id);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      loadItems();
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`Remove "${item.name}" from your catalog?`);
+      if (confirmed) {
+        await doDelete();
+      }
+    } else {
+      Alert.alert("Delete Item", `Remove "${item.name}" from your catalog?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: doDelete,
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const handleCreateBill = async () => {
