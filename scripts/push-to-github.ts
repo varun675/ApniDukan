@@ -38,11 +38,6 @@ async function getAccessToken() {
   return accessToken;
 }
 
-async function getUncachableGitHubClient() {
-  const accessToken = await getAccessToken();
-  return new Octokit({ auth: accessToken });
-}
-
 const REPO_OWNER = 'varun675';
 const REPO_NAME = 'ApniDukan';
 
@@ -53,7 +48,6 @@ const IGNORE_PATTERNS = [
   'server_dist',
   '.expo',
   '.cache',
-  'scripts/push-to-github.ts',
   '__pycache__',
   '.DS_Store',
   'Thumbs.db',
@@ -63,6 +57,7 @@ const IGNORE_PATTERNS = [
   'replit.nix',
   '.upm',
   'tmp',
+  'replit.md',
 ];
 
 function shouldIgnore(relativePath: string): boolean {
@@ -102,33 +97,22 @@ async function sleep(ms: number) {
 
 async function main() {
   console.log('Connecting to GitHub...');
-  const octokit = await getUncachableGitHubClient();
+  const accessToken = await getAccessToken();
+  const octokit = new Octokit({ auth: accessToken });
 
   const user = await octokit.rest.users.getAuthenticated();
   console.log(`Authenticated as: ${user.data.login}`);
 
   const repo = await octokit.rest.repos.get({ owner: REPO_OWNER, repo: REPO_NAME });
   const defaultBranch = repo.data.default_branch || 'main';
-  console.log(`Repository found. Default branch: ${defaultBranch}`);
-
-  let latestSha: string | undefined;
-  try {
-    const ref = await octokit.rest.git.getRef({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      ref: `heads/${defaultBranch}`,
-    });
-    latestSha = ref.data.object.sha;
-    console.log(`Latest commit: ${latestSha.substring(0, 7)}`);
-  } catch {
-    console.log('No commits found on branch.');
-  }
+  console.log(`Repository: ${REPO_OWNER}/${REPO_NAME} (branch: ${defaultBranch})`);
 
   const projectDir = process.cwd();
   const files = getAllFiles(projectDir);
   console.log(`Found ${files.length} files to push.\n`);
 
   let uploaded = 0;
+  let skipped = 0;
   let failed = 0;
 
   for (const file of files) {
@@ -149,7 +133,7 @@ async function main() {
       if (!Array.isArray(existing.data) && existing.data.type === 'file') {
         existingSha = existing.data.sha;
         if (existing.data.content && existing.data.content.replace(/\n/g, '') === content.replace(/\n/g, '')) {
-          uploaded++;
+          skipped++;
           continue;
         }
       }
@@ -161,16 +145,16 @@ async function main() {
         owner: REPO_OWNER,
         repo: REPO_NAME,
         path: file,
-        message: `Update ${file}`,
+        message: existingSha ? `Update ${file}` : `Add ${file}`,
         content,
         sha: existingSha,
         branch: defaultBranch,
       });
       uploaded++;
-      console.log(`[${uploaded}/${files.length}] Updated: ${file}`);
+      console.log(`[${uploaded + skipped}/${files.length}] ${existingSha ? 'Updated' : 'Added'}: ${file}`);
     } catch (err: any) {
       if (err.status === 409) {
-        await sleep(1000);
+        await sleep(1500);
         try {
           const fresh = await octokit.rest.repos.getContent({
             owner: REPO_OWNER,
@@ -183,13 +167,13 @@ async function main() {
             owner: REPO_OWNER,
             repo: REPO_NAME,
             path: file,
-            message: `Update ${file}`,
+            message: freshSha ? `Update ${file}` : `Add ${file}`,
             content,
             sha: freshSha,
             branch: defaultBranch,
           });
           uploaded++;
-          console.log(`[${uploaded}/${files.length}] Updated (retry): ${file}`);
+          console.log(`[${uploaded + skipped}/${files.length}] Updated (retry): ${file}`);
         } catch (retryErr: any) {
           failed++;
           console.error(`Failed: ${file} - ${retryErr.message}`);
@@ -200,21 +184,14 @@ async function main() {
       }
     }
 
-    await sleep(200);
+    await sleep(300);
   }
 
-  console.log(`\nDone! ${uploaded} files uploaded, ${failed} failed.`);
+  console.log(`\nDone! ${uploaded} updated, ${skipped} unchanged, ${failed} failed.`);
   console.log(`View at: https://github.com/${REPO_OWNER}/${REPO_NAME}`);
-  if (failed === 0) {
-    console.log(`GitHub Actions will auto-deploy to https://${REPO_OWNER}.github.io/${REPO_NAME}/`);
-  }
 }
 
 main().catch(err => {
   console.error('Push failed:', err.message || err);
-  if (err.response) {
-    console.error('Status:', err.response.status);
-    console.error('Data:', JSON.stringify(err.response.data, null, 2));
-  }
   process.exit(1);
 });
