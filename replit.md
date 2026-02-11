@@ -2,21 +2,18 @@
 
 ## Overview
 
-Apni Dukan is a mobile-first grocery shop management app built with Expo (React Native) and an Express backend. It allows vendors to manage a text-only catalog of items (fruits, vegetables, etc.), share daily price lists via WhatsApp with attractive emoji-rich formatting, create customer bills with UPI payment QR codes, track daily accounts (expenses and sales), view business analytics, and manage business settings including WhatsApp group lists. The app uses a tab-based navigation with five sections: Items, Bills, Accounts, Summary, and Settings.
+Apni Dukan is a mobile-first grocery shop management Progressive Web App (PWA) built with React + Vite and an Express backend. It allows vendors to manage a text-only catalog of items (fruits, vegetables, etc.), share daily price lists via WhatsApp with attractive emoji-rich formatting, create customer bills with UPI payment QR codes, track daily accounts (expenses and sales), view business analytics, and manage business settings including WhatsApp group lists. The app uses a tab-based navigation with five sections: Items, Bills, Accounts, Summary, and Settings. Branded as Codesmotech Consulting Pvt Ltd.
 
 ## Recent Changes (Feb 2026)
 
-- Rebranded from FreshCart to Apni Dukan with new app icon and warm orange/green theme
-- Simplified item management to text-only (removed camera/image functionality entirely)
-- Implemented Flash Sale feature with 1-6 hour duration selector and special WhatsApp message formatting
-- Added WhatsApp group management in Settings with sequential sharing workflow (modal guides user through each group)
-- Built attractive emoji-rich WhatsApp message formatting for price lists and bills
-- Created Summary tab with bar charts for daily expenses, sales, and profit/loss analytics over 7/14/30 day periods
-- AsyncStorage keys changed from `freshcart_*` to `apnidukan_*`
-- Added QR code upload in Settings for custom payment QR images
-- Built universal /pay endpoint: branded HTML page that auto-detects device and opens customer's preferred UPI app (PhonePe, GPay, Paytm, WhatsApp Pay). Uses upi:// deep link with Android intent:// fallback. Includes manual copy UPI ID option.
-- Settings has separate PhonePe UPI ID, Google Pay UPI ID, and General UPI ID fields
-- WhatsApp bill messages include a single universal payment link that works across all UPI apps on iOS and Android
+- **Migrated from Expo/React Native to pure React + Vite** for web-only deployment
+- Replaced AsyncStorage with localStorage (synchronous API in `client/src/lib/storage.ts`)
+- Replaced expo-router with react-router-dom (BrowserRouter with Routes)
+- Replaced React Native components with standard HTML/CSS
+- Replaced @expo/vector-icons with react-icons/io5
+- Replaced react-native-qrcode-svg with qrcode.react (QRCodeSVG)
+- Server now uses Vite middleware in development, serves built React app in production
+- All app UI served on port 5000 through Express + Vite middleware
 
 ## User Preferences
 
@@ -30,62 +27,75 @@ Apni Dukan is a mobile-first grocery shop management app built with Expo (React 
 
 ## System Architecture
 
-### Frontend (Expo / React Native)
-- **Framework**: Expo SDK 54 with React Native 0.81, using the new architecture (`newArchEnabled: true`)
-- **Routing**: expo-router v6 with file-based routing. The app uses a tab layout (`app/(tabs)/`) with five tabs (Items, Bills, Accounts, Summary, Settings) and modal screens for add-item, create-bill, and bill-detail
-- **State Management**: Local state with React hooks. Data fetching uses `@tanstack/react-query` with a custom query client configured in `lib/query-client.ts`. Screen-level data loading uses `useFocusEffect` callbacks
-- **Data Storage**: Primary data persistence is via `@react-native-async-storage/async-storage` (see `lib/storage.ts`). Items, bills, settings, and daily accounts are stored as JSON in AsyncStorage with keys prefixed `apnidukan_`. This is local-only storage on the device
-- **Fonts**: Nunito font family loaded via `@expo-google-fonts/nunito` (Regular, SemiBold, Bold, ExtraBold)
-- **UI Components**: Custom components with React Native primitives. Uses `expo-haptics` for tactile feedback, `expo-blur` and `expo-glass-effect` for visual effects, `react-native-qrcode-svg` for QR code generation
-- **Platform Support**: iOS, Android, and Web. Platform-specific code handles differences (e.g., haptics only on native, keyboard handling varies by platform)
-- **No Image Handling**: Items are text-only (no camera or image picker needed for items)
+### Frontend (React + Vite)
+- **Framework**: React 19 with Vite bundler, TypeScript
+- **Location**: `client/` directory with `src/` containing all source files
+- **Entry**: `client/index.html` → `client/src/main.tsx` → `client/src/App.tsx`
+- **Routing**: react-router-dom v7 with BrowserRouter. Tab pages in `client/src/pages/`, layout in `client/src/components/Layout.tsx`
+- **State Management**: Local state with React hooks (useState, useEffect)
+- **Data Storage**: localStorage via synchronous helper functions in `client/src/lib/storage.ts`. Keys prefixed `apnidukan_`
+- **Fonts**: Nunito font family loaded via Google Fonts CDN in index.html
+- **Icons**: react-icons/io5 (Ionicons 5)
+- **QR Codes**: qrcode.react (QRCodeSVG component)
+- **Styling**: Inline React.CSSProperties with max-width 480px centered mobile-first layout
+- **CSS**: Global styles in `client/src/index.css`
 
 ### Backend (Express)
 - **Framework**: Express v5 running on Node.js
-- **Location**: `server/` directory with `index.ts` (entry point), `routes.ts` (API route registration), and `storage.ts` (data storage interface)
-- **Current State**: The backend is mostly a skeleton. It has CORS setup for Replit domains and localhost, serves static files in production, but has minimal API routes
-- **Development**: Uses `tsx` for TypeScript execution in dev mode. Production builds use `esbuild` to bundle to `server_dist/`
+- **Location**: `server/` directory with `index.ts` (entry point), `routes.ts` (API routes)
+- **Dev Mode**: Uses Vite middleware mode to serve the React app with HMR on port 5000
+- **Production**: Serves built React app from `dist/public/` as static files
+- **API Routes**: `/pay` and `/pay.html` endpoints for UPI payment page
+- **Development**: Uses `tsx` for TypeScript execution (`npm run server:dev`)
 
-### Key Data Models (AsyncStorage-based in `lib/storage.ts`)
+### Key Data Models (localStorage-based in `client/src/lib/storage.ts`)
 - **Item**: Product catalog entry with id, name, price, pricingType (per_kg/per_unit/per_piece/per_dozen), quantity (optional text)
-- **Bill**: Customer invoice with customerName, flatNumber, items array, totalAmount, paid status
+- **Bill**: Customer invoice with billNumber, customerName, flatNumber, items array, totalAmount, paid status
 - **BillItem**: Line item on a bill with quantity and calculated total
-- **Settings**: Business config with upiId, businessName, phoneNumber, whatsappGroups (array of {id, name})
-- **DailyAccount**: Daily financial tracking with expenses and sales amounts
+- **Settings**: Business config with upiId, phonepeUpiId, gpayUpiId, businessName, phoneNumber, shopAddress, paymentQrImage, whatsappGroups
+- **DailyAccount**: Daily financial tracking with expenses array and totalSale
 - **WhatsAppGroup**: Simple {id, name} for saved WhatsApp group references
+- **FlashSaleState**: active flag, duration, startTime, endTime, originalPrices map
 
 ### Key Features
 - **Flash Sale**: Toggle on Items screen enables flash sale mode with 1-6 hour duration picker. Changes WhatsApp message to include urgency indicators and time-limited offer text
-- **WhatsApp Sharing**: Generates emoji-rich, attractive price list messages. If WhatsApp groups are saved in settings, a modal guides sequential sharing to each group
-- **Bill Generation**: Two-step flow (customer details → item selection). Bills include UPI QR code for payment
-- **Daily Accounts**: Track expenses and sales per day
+- **WhatsApp Sharing**: Generates emoji-rich, attractive price list messages. If WhatsApp groups are saved in settings, a modal guides sequential sharing to each group. Opens wa.me links
+- **Bill Generation**: Two-step flow (customer details → item selection). Bills include auto-generated bill numbers and UPI QR code for payment
+- **Daily Accounts**: Track expenses and sales per day with add/edit functionality
 - **Summary Analytics**: Bar charts showing expenses, sales, and profit/loss over 7/14/30 day periods
+- **UPI Payment Page**: Server-rendered `/pay` endpoint with branded HTML that opens PhonePe, GPay, or Paytm via deep links
 
 ### Build & Development
-- **Dev Mode**: Two processes needed — `expo:dev` for the Expo dev server and `server:dev` for the Express backend
-- **Production Build**: `scripts/build.js` handles building the Expo web app for static serving
-- **Proxy Setup**: In development, the Expo web client connects to the Express server via `EXPO_PUBLIC_DOMAIN` environment variable
+- **Dev Mode**: Single process — `npm run server:dev` starts Express with Vite middleware on port 5000
+- **Production Build**: `npx vite build` builds React app to `dist/public/`, Express serves it statically
+- **Path Aliases**: `@/` maps to `client/src/` via Vite config and TypeScript `client/tsconfig.json`
 
 ### Navigation Structure
 ```
-app/
-├── _layout.tsx          # Root layout with QueryClientProvider, fonts, gesture handler
-├── (tabs)/
-│   ├── _layout.tsx      # Tab navigator (native tabs on iOS 26+, classic tabs elsewhere)
-│   ├── index.tsx        # Items catalog tab (with Flash Sale, WhatsApp share)
-│   ├── bills.tsx        # Bills list tab
-│   ├── accounts.tsx     # Daily accounts tab
-│   ├── summary.tsx      # Business analytics/charts tab
-│   └── settings.tsx     # Business settings tab (with WhatsApp groups)
-├── add-item.tsx         # Modal: Add/edit item (text-only, no camera)
-├── create-bill.tsx      # Modal: Create new bill
-└── bill-detail.tsx      # Modal: View bill details with QR code
+client/src/
+├── main.tsx              # React entry point with BrowserRouter
+├── App.tsx               # Route definitions
+├── index.css             # Global styles
+├── components/
+│   └── Layout.tsx        # Tab layout with bottom navigation bar
+├── constants/
+│   └── colors.ts         # App color constants
+├── lib/
+│   └── storage.ts        # localStorage data layer (all synchronous)
+└── pages/
+    ├── Items.tsx          # Items catalog tab (with Flash Sale, WhatsApp share)
+    ├── Bills.tsx          # Bills list tab (grouped by date)
+    ├── Accounts.tsx       # Daily accounts tab
+    ├── Summary.tsx        # Business analytics/charts tab
+    ├── Settings.tsx       # Business settings tab (with WhatsApp groups, QR upload)
+    ├── AddItem.tsx        # Add/edit item page
+    ├── CreateBill.tsx     # Create new bill (two-step flow)
+    └── BillDetail.tsx     # View bill details with QR code
 ```
 
 ## External Dependencies
 
-- **UPI Payment Integration**: The app generates UPI deep links and QR codes for payment collection. Uses the `upi://pay` URL scheme with merchant's configured UPI ID
-- **AsyncStorage**: Primary client-side data persistence (no cloud sync currently)
-- **Expo Services**: Uses various Expo SDK modules (haptics, blur, glass-effect, etc.)
-- **React Query**: Configured for API communication with the Express backend, though most data currently flows through AsyncStorage
-- **Google Fonts**: Nunito font family loaded from `@expo-google-fonts`
+- **UPI Payment Integration**: The app generates UPI deep links and QR codes for payment collection. Uses the `upi://pay` URL scheme
+- **localStorage**: Primary client-side data persistence (no cloud sync)
+- **Google Fonts CDN**: Nunito font family
+- **WhatsApp Web**: Opens wa.me links for sharing price lists and bills
