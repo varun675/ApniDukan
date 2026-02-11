@@ -181,6 +181,8 @@ export default function SettingsPage() {
               setSettings((prev) => ({ ...prev, businessName: e.target.value }))
             }
             placeholder="Your business name"
+            enterKeyHint="next"
+            autoComplete="off"
           />
           <div style={hint}>This name appears in your WhatsApp messages</div>
 
@@ -192,6 +194,9 @@ export default function SettingsPage() {
               setSettings((prev) => ({ ...prev, phoneNumber: e.target.value }))
             }
             placeholder="Your phone number"
+            inputMode="tel"
+            enterKeyHint="next"
+            autoComplete="off"
           />
           <div style={{ ...hint, marginBottom: 12 }} />
 

@@ -102,7 +102,8 @@ export default function AddItemPage() {
                 placeholder="e.g. Tomatoes, Mangoes, Coconut"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                autoFocus={!isEditing}
+                enterKeyHint="next"
+                autoComplete="off"
               />
             </div>
 
@@ -113,10 +114,11 @@ export default function AddItemPage() {
                 <input
                   style={styles.priceInput}
                   placeholder="0"
-                  type="number"
-                  min="0"
+                  inputMode="decimal"
+                  type="text"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
+                  enterKeyHint="next"
                 />
               </div>
             </div>

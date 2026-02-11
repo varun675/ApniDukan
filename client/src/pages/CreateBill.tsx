@@ -178,7 +178,8 @@ export default function CreateBillPage() {
                 placeholder="Enter customer name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                autoFocus
+                enterKeyHint="next"
+                autoComplete="off"
               />
             </div>
 
@@ -189,6 +190,8 @@ export default function CreateBillPage() {
                 placeholder="e.g. A-101, B-204"
                 value={flatNumber}
                 onChange={(e) => setFlatNumber(e.target.value)}
+                enterKeyHint="done"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -290,22 +293,24 @@ export default function CreateBillPage() {
                         <div style={styles.kgGramsGroup}>
                           <input
                             style={styles.kgGramsInput}
-                            type="number"
-                            min="0"
+                            type="text"
+                            inputMode="numeric"
                             value={kgValues.get(item.id)?.kg || "0"}
-                            onChange={(e) => updateKgGrams(item.id, "kg", e.target.value)}
+                            onChange={(e) => updateKgGrams(item.id, "kg", e.target.value.replace(/[^0-9]/g, ''))}
                             onFocus={(e) => e.target.select()}
+                            enterKeyHint="next"
                           />
                           <span style={styles.kgGramsLabel}>Kg</span>
                         </div>
                         <div style={styles.kgGramsGroup}>
                           <input
                             style={styles.kgGramsInput}
-                            type="number"
-                            min="0"
+                            type="text"
+                            inputMode="numeric"
                             value={kgValues.get(item.id)?.grams || "0"}
-                            onChange={(e) => updateKgGrams(item.id, "grams", e.target.value)}
+                            onChange={(e) => updateKgGrams(item.id, "grams", e.target.value.replace(/[^0-9]/g, ''))}
                             onFocus={(e) => e.target.select()}
+                            enterKeyHint="done"
                           />
                           <span style={styles.kgGramsLabel}>gm</span>
                         </div>
@@ -333,10 +338,11 @@ export default function CreateBillPage() {
                       </button>
                       <input
                         style={styles.qtyInput}
-                        type="number"
-                        min="1"
+                        type="text"
+                        inputMode="numeric"
                         value={qty}
-                        onChange={(e) => updateQty(item.id, e.target.value)}
+                        onChange={(e) => updateQty(item.id, e.target.value.replace(/[^0-9]/g, ''))}
+                        enterKeyHint="done"
                       />
                       <button
                         style={styles.qtyBtn}

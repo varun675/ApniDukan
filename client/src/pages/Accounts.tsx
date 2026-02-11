@@ -200,13 +200,17 @@ export default function AccountsPage() {
             value={expDesc}
             onChange={(e) => setExpDesc(e.target.value)}
             style={{ ...styles.input, flex: 2 }}
+            enterKeyHint="next"
+            autoComplete="off"
           />
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="₹ Amount"
             value={expAmount}
-            onChange={(e) => setExpAmount(e.target.value)}
+            onChange={(e) => setExpAmount(e.target.value.replace(/[^0-9.]/g, ''))}
             style={{ ...styles.input, flex: 1 }}
+            enterKeyHint="done"
           />
           <button style={styles.addBtn} onClick={addExpense}>
             <IoAdd size={20} color="#fff" />
@@ -218,11 +222,13 @@ export default function AccountsPage() {
         <h3 style={styles.sectionTitle}>Today's Sale</h3>
         <div style={styles.inputRow}>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="₹ Sale Amount"
             value={saleAmount}
-            onChange={(e) => setSaleAmount(e.target.value)}
+            onChange={(e) => setSaleAmount(e.target.value.replace(/[^0-9.]/g, ''))}
             style={{ ...styles.input, flex: 1 }}
+            enterKeyHint="done"
           />
           <button style={styles.updateBtn} onClick={updateSale}>
             Update
