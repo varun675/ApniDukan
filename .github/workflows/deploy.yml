@@ -35,8 +35,13 @@ jobs:
         env:
           EXPO_PUBLIC_PAYMENT_BASE_URL: https://varun675.github.io/ApniDukan
 
-      - name: Copy pay.html to dist
-        run: cp public/pay.html dist/pay.html
+      - name: Copy public assets to dist
+        run: |
+          cp public/pay.html dist/pay.html
+          cp public/manifest.json dist/manifest.json
+          cp public/sw.js dist/sw.js
+          cp public/pwa-icon-192.png dist/pwa-icon-192.png
+          cp public/pwa-icon-512.png dist/pwa-icon-512.png
 
       - name: Add .nojekyll
         run: touch dist/.nojekyll
