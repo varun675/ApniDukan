@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Animated as RNAnimated,
+  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,6 +20,7 @@ import Colors from "@/constants/colors";
 import {
   getItems,
   saveBill,
+  deleteItem,
   formatCurrencyShort,
   getPricingLabel,
   getFlashSaleState,
@@ -25,6 +28,98 @@ import {
   BillItem,
   FlashSaleState,
 } from "@/lib/storage";
+
+const DELETE_THRESHOLD = -80;
+
+function SwipeableBillItem({
+  children,
+  onDelete,
+}: {
+  children: React.ReactNode;
+  onDelete: () => void;
+}) {
+  const translateX = useRef(new RNAnimated.Value(0)).current;
+  const isSwipedRef = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 20;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) {
+          translateX.setValue(Math.max(gestureState.dx, -120));
+        } else if (isSwipedRef.current) {
+          translateX.setValue(Math.min(gestureState.dx + DELETE_THRESHOLD, 0));
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < DELETE_THRESHOLD) {
+          RNAnimated.spring(translateX, { toValue: DELETE_THRESHOLD, useNativeDriver: false }).start();
+          isSwipedRef.current = true;
+        } else {
+          RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+          isSwipedRef.current = false;
+        }
+      },
+    })
+  ).current;
+
+  const resetSwipe = () => {
+    RNAnimated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+    isSwipedRef.current = false;
+  };
+
+  return (
+    <View style={{ overflow: "hidden" as const, borderRadius: 14, marginBottom: 10 }}>
+      <View style={billSwipeStyles.deleteBackground}>
+        <Pressable
+          style={billSwipeStyles.deleteBgBtn}
+          onPress={() => {
+            resetSwipe();
+            onDelete();
+          }}
+        >
+          <Ionicons name="trash" size={22} color={Colors.white} />
+          <Text style={billSwipeStyles.deleteBgText}>Delete</Text>
+        </Pressable>
+      </View>
+      <RNAnimated.View
+        style={{ transform: [{ translateX }] }}
+        {...panResponder.panHandlers}
+      >
+        {children}
+      </RNAnimated.View>
+    </View>
+  );
+}
+
+const billSwipeStyles = StyleSheet.create({
+  deleteBackground: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: "#FF3B30",
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+  deleteBgBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    width: "100%",
+    height: "100%",
+  },
+  deleteBgText: {
+    fontSize: 11,
+    fontFamily: "Nunito_700Bold",
+    color: Colors.white,
+  },
+});
 
 export default function CreateBillScreen() {
   const insets = useSafeAreaInsets();
@@ -129,6 +224,27 @@ export default function CreateBillScreen() {
     setStep("items");
   };
 
+  const handleDeleteItem = (item: Item) => {
+    Alert.alert("Delete Item", `Remove "${item.name}" from your catalog?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const newSelected = new Map(selected);
+          newSelected.delete(item.id);
+          setSelected(newSelected);
+          const newKg = new Map(kgValues);
+          newKg.delete(item.id);
+          setKgValues(newKg);
+          await deleteItem(item.id);
+          if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          loadItems();
+        },
+      },
+    ]);
+  };
+
   const handleCreateBill = async () => {
     const billItems = getSelectedItems();
     if (billItems.length === 0) {
@@ -155,91 +271,93 @@ export default function CreateBillScreen() {
     const isPriceChanged = origPrice !== undefined && origPrice !== item.price;
 
     return (
-      <View style={[styles.itemCard, isSelected && styles.itemCardSelected]}>
-        <Pressable
-          style={styles.itemMainRow}
-          onPress={() => toggleItem(item.id)}
-        >
-          <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
-            {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
-          </View>
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <View style={styles.priceRow}>
-              {isPriceChanged && (
-                <Text style={styles.originalPrice}>{formatCurrencyShort(origPrice)}</Text>
-              )}
-              <Text style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}>
-                {formatCurrencyShort(item.price)}{getPricingLabel(item.pricingType)}
+      <SwipeableBillItem onDelete={() => handleDeleteItem(item)}>
+        <View style={[styles.itemCard, isSelected && styles.itemCardSelected]}>
+          <Pressable
+            style={styles.itemMainRow}
+            onPress={() => toggleItem(item.id)}
+          >
+            <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+              {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
+            </View>
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+              <View style={styles.priceRow}>
+                {isPriceChanged && (
+                  <Text style={styles.originalPrice}>{formatCurrencyShort(origPrice)}</Text>
+                )}
+                <Text style={[styles.itemPrice, isPriceChanged && styles.flashPrice]}>
+                  {formatCurrencyShort(item.price)}{getPricingLabel(item.pricingType)}
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+          {isSelected && item.pricingType === "per_kg" && (
+            <View style={styles.qtyRow}>
+              <View style={styles.kgGramsRow}>
+                <View style={styles.kgGramsGroup}>
+                  <TextInput
+                    style={styles.kgGramsInput}
+                    keyboardType="numeric"
+                    value={kgValues.get(item.id)?.kg || "0"}
+                    onChangeText={(t) => updateKgGrams(item.id, "kg", t)}
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.kgGramsLabel}>Kg</Text>
+                </View>
+                <View style={styles.kgGramsGroup}>
+                  <TextInput
+                    style={styles.kgGramsInput}
+                    keyboardType="numeric"
+                    value={kgValues.get(item.id)?.grams || "0"}
+                    onChangeText={(t) => updateKgGrams(item.id, "grams", t)}
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.kgGramsLabel}>gm</Text>
+                </View>
+              </View>
+              <Text style={styles.lineTotal}>
+                = {formatCurrencyShort(item.price * (
+                  (parseFloat(kgValues.get(item.id)?.kg || "0") || 0) +
+                  (parseFloat(kgValues.get(item.id)?.grams || "0") || 0) / 1000
+                ))}
               </Text>
             </View>
-          </View>
-        </Pressable>
-        {isSelected && item.pricingType === "per_kg" && (
-          <View style={styles.qtyRow}>
-            <View style={styles.kgGramsRow}>
-              <View style={styles.kgGramsGroup}>
-                <TextInput
-                  style={styles.kgGramsInput}
-                  keyboardType="numeric"
-                  value={kgValues.get(item.id)?.kg || "0"}
-                  onChangeText={(t) => updateKgGrams(item.id, "kg", t)}
-                  selectTextOnFocus
-                />
-                <Text style={styles.kgGramsLabel}>Kg</Text>
-              </View>
-              <View style={styles.kgGramsGroup}>
-                <TextInput
-                  style={styles.kgGramsInput}
-                  keyboardType="numeric"
-                  value={kgValues.get(item.id)?.grams || "0"}
-                  onChangeText={(t) => updateKgGrams(item.id, "grams", t)}
-                  selectTextOnFocus
-                />
-                <Text style={styles.kgGramsLabel}>gm</Text>
-              </View>
+          )}
+          {isSelected && item.pricingType !== "per_kg" && (
+            <View style={styles.qtyRow}>
+              <Text style={styles.qtyLabel}>Qty:</Text>
+              <Pressable
+                onPress={() => {
+                  const current = parseFloat(qty) || 1;
+                  if (current > 1) updateQty(item.id, (current - 1).toString());
+                }}
+                style={styles.qtyBtn}
+              >
+                <Ionicons name="remove" size={16} color={Colors.text} />
+              </Pressable>
+              <TextInput
+                style={styles.qtyInput}
+                keyboardType="numeric"
+                value={qty}
+                onChangeText={(t) => updateQty(item.id, t)}
+              />
+              <Pressable
+                onPress={() => {
+                  const current = parseFloat(qty) || 0;
+                  updateQty(item.id, (current + 1).toString());
+                }}
+                style={styles.qtyBtn}
+              >
+                <Ionicons name="add" size={16} color={Colors.text} />
+              </Pressable>
+              <Text style={styles.lineTotal}>
+                = {formatCurrencyShort(item.price * (parseFloat(qty) || 0))}
+              </Text>
             </View>
-            <Text style={styles.lineTotal}>
-              = {formatCurrencyShort(item.price * (
-                (parseFloat(kgValues.get(item.id)?.kg || "0") || 0) +
-                (parseFloat(kgValues.get(item.id)?.grams || "0") || 0) / 1000
-              ))}
-            </Text>
-          </View>
-        )}
-        {isSelected && item.pricingType !== "per_kg" && (
-          <View style={styles.qtyRow}>
-            <Text style={styles.qtyLabel}>Qty:</Text>
-            <Pressable
-              onPress={() => {
-                const current = parseFloat(qty) || 1;
-                if (current > 1) updateQty(item.id, (current - 1).toString());
-              }}
-              style={styles.qtyBtn}
-            >
-              <Ionicons name="remove" size={16} color={Colors.text} />
-            </Pressable>
-            <TextInput
-              style={styles.qtyInput}
-              keyboardType="numeric"
-              value={qty}
-              onChangeText={(t) => updateQty(item.id, t)}
-            />
-            <Pressable
-              onPress={() => {
-                const current = parseFloat(qty) || 0;
-                updateQty(item.id, (current + 1).toString());
-              }}
-              style={styles.qtyBtn}
-            >
-              <Ionicons name="add" size={16} color={Colors.text} />
-            </Pressable>
-            <Text style={styles.lineTotal}>
-              = {formatCurrencyShort(item.price * (parseFloat(qty) || 0))}
-            </Text>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
+      </SwipeableBillItem>
     );
   };
 
@@ -334,6 +452,9 @@ export default function CreateBillScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <Text style={styles.swipeHintText}>Swipe left on any item to delete</Text>
+          }
         />
       )}
 
@@ -429,7 +550,6 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
-    marginBottom: 10,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
@@ -641,5 +761,12 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito_400Regular",
     color: Colors.textLight,
     textAlign: "center",
+  },
+  swipeHintText: {
+    fontSize: 12,
+    fontFamily: "Nunito_400Regular",
+    color: Colors.textLight,
+    textAlign: "center",
+    marginBottom: 10,
   },
 });
