@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Colors from "@/constants/colors";
-import { getSettings, saveSettings, Settings } from "@/lib/storage";
+import { getSettings, saveSettings } from "@/lib/storage";
+import type { Settings } from "@/lib/storage";
 import {
   IoStorefrontOutline,
   IoWalletOutline,
