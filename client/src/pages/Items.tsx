@@ -359,6 +359,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: Colors.background,
     fontFamily: "'Nunito', sans-serif",
     position: "relative",
+    overflow: "hidden",
   },
   header: {
     padding: "16px 16px 12px",
@@ -507,8 +508,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   listArea: {
     flex: 1,
+    minHeight: 0,
     overflowY: "auto",
     padding: "8px 16px",
+    WebkitOverflowScrolling: "touch",
   },
   emptyState: {
     display: "flex",

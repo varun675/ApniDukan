@@ -484,7 +484,7 @@ export default function ItemsScreen() {
         contentContainerStyle={[
           styles.listContent,
           items.length === 0 && styles.listContentEmpty,
-          items.length > 0 && { paddingBottom: Platform.OS === "web" ? 160 : insets.bottom + 140 },
+          { paddingBottom: Platform.OS === "web" ? 160 : insets.bottom + 140 },
         ]}
         ListEmptyComponent={renderEmpty}
         ListHeaderComponent={items.length > 0 ? (
@@ -502,19 +502,17 @@ export default function ItemsScreen() {
         }
       />
 
-      {items.length > 0 && (
-        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 10) + 60 }]}>
-          <Pressable
-            style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
-            onPress={shareToWhatsApp}
-          >
-            <Ionicons name="logo-whatsapp" size={22} color={Colors.white} />
-            <Text style={styles.shareBtnText}>
-              {flashSale ? "Share Flash Sale" : "Share Price List"}
-            </Text>
-          </Pressable>
-        </View>
-      )}
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 90 : Math.max(insets.bottom, 10) + 60 }]}>
+        <Pressable
+          style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+          onPress={shareToWhatsApp}
+        >
+          <Ionicons name="logo-whatsapp" size={22} color={Colors.white} />
+          <Text style={styles.shareBtnText}>
+            {flashSale ? "Share Flash Sale" : "Share Price List"}
+          </Text>
+        </Pressable>
+      </View>
 
       <Modal
         visible={showShareModal}
