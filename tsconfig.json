@@ -15,7 +15,6 @@
     }
   },
   "include": [
-    "server/**/*.ts",
     "client/src/**/*.ts",
     "client/src/**/*.tsx"
   ]

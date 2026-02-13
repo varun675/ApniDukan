@@ -9,6 +9,7 @@ import SettingsPage from "./pages/Settings";
 import AddItemPage from "./pages/AddItem";
 import CreateBillPage from "./pages/CreateBill";
 import BillDetailPage from "./pages/BillDetail";
+import PaymentPage from "./pages/PaymentPage";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="add-item" element={<AddItemPage />} />
       <Route path="create-bill" element={<CreateBillPage />} />
       <Route path="bill-detail" element={<BillDetailPage />} />
+      <Route path="pay" element={<PaymentPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
