@@ -467,7 +467,7 @@ export function generateWhatsAppMessage(
     if (hasPriceChanged) {
       const origStr = origPrice === Math.floor(origPrice) ? origPrice.toString() : origPrice.toFixed(2);
       const saved = Math.round(origPrice - priceNum);
-      msg += `     ❌ ~₹${origStr}${priceLabel}~\n`;
+      msg += `     ❌💰 ~₹${origStr}${priceLabel}~\n`;
       msg += `     🔥 *💰 ₹${priceStr}${priceLabel}*  ✅ SAVE 💰₹${saved}!\n`;
     } else {
       msg += `     💰 *₹${priceStr}*${priceLabel}\n`;
