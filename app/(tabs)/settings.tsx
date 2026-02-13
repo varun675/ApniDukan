@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -19,18 +19,27 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { showAlert, showConfirm } from "@/lib/alert";
-import { getSettings, saveSettings, Settings } from "@/lib/storage";
+import { getSettings, getSettingsSync, saveSettings, Settings } from "@/lib/storage";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const [settings, setSettingsState] = useState<Settings>({
-    upiId: "",
-    businessName: "",
-    phoneNumber: "",
-    whatsappGroups: [],
-    qrCodeImage: undefined,
+  const [settings, setSettingsState] = useState<Settings>(() => {
+    if (Platform.OS === "web") {
+      return getSettingsSync();
+    }
+    return {
+      upiId: "",
+      businessName: "",
+      phoneNumber: "",
+      whatsappGroups: [],
+      qrCodeImage: undefined,
+    };
   });
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 const KEYS = {
   ITEMS: "apnidukan_items",
@@ -7,6 +8,57 @@ const KEYS = {
   DAILY_ACCOUNTS: "apnidukan_daily_accounts",
   FLASH_SALE: "apnidukan_flash_sale",
 };
+
+function getLocalStorageSync(key: string): string | null {
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.localStorage) {
+    return window.localStorage.getItem(key);
+  }
+  return null;
+}
+
+export function getItemsSync(): Item[] {
+  try {
+    const data = getLocalStorageSync(KEYS.ITEMS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getSettingsSync(): Settings {
+  try {
+    const data = getLocalStorageSync(KEYS.SETTINGS);
+    if (data) {
+      const parsed = JSON.parse(data);
+      return {
+        upiId: parsed.upiId || "",
+        phonepeUpiId: parsed.phonepeUpiId || undefined,
+        gpayUpiId: parsed.gpayUpiId || undefined,
+        businessName: parsed.businessName || "",
+        phoneNumber: parsed.phoneNumber || "",
+        shopAddress: parsed.shopAddress || undefined,
+        whatsappGroups: parsed.whatsappGroups || [],
+        qrCodeImage: parsed.qrCodeImage || undefined,
+        paymentLink: parsed.paymentLink || undefined,
+      };
+    }
+  } catch {}
+  return { upiId: "", businessName: "", phoneNumber: "", whatsappGroups: [], qrCodeImage: undefined, paymentLink: undefined };
+}
+
+export function getFlashSaleStateSync(): FlashSaleState | null {
+  try {
+    const data = getLocalStorageSync(KEYS.FLASH_SALE);
+    if (!data) return null;
+    const state: FlashSaleState = JSON.parse(data);
+    if (state.active && new Date(state.endTime).getTime() > Date.now()) {
+      return state;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export interface Item {
   id: string;

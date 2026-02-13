@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -55,6 +55,10 @@ export default function AccountsScreen() {
     const all = await getDailyAccounts();
     setAllAccounts(all.slice(0, 30));
   }, [selectedDate]);
+
+  useEffect(() => {
+    loadAccount();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

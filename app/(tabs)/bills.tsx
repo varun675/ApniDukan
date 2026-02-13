@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -39,6 +39,10 @@ export default function BillsScreen() {
     setTotalBills(data.length);
     const grouped = groupBillsByDate(data);
     setGroups(grouped);
+  }, []);
+
+  useEffect(() => {
+    loadBills();
   }, []);
 
   useFocusEffect(

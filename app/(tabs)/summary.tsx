@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -116,6 +116,10 @@ export default function SummaryScreen() {
   const [accounts, setAccounts] = useState<DailyAccount[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>("7days");
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

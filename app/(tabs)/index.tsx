@@ -23,12 +23,15 @@ import Colors from "@/constants/colors";
 import { showAlert, showConfirm } from "@/lib/alert";
 import {
   getItems,
+  getItemsSync,
   deleteItem,
   getSettings,
+  getSettingsSync,
   getPricingLabel,
   formatCurrencyShort,
   generateWhatsAppMessage,
   getFlashSaleState,
+  getFlashSaleStateSync,
   startFlashSale,
   endFlashSale,
   getFlashSaleRemainingTime,
@@ -169,12 +172,13 @@ function SwipeableItem({
 
 export default function ItemsScreen() {
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<Item[]>([]);
-  const [settings, setSettingsData] = useState<Settings | null>(null);
+  const initialFsState = Platform.OS === "web" ? getFlashSaleStateSync() : null;
+  const [items, setItems] = useState<Item[]>(() => Platform.OS === "web" ? getItemsSync() : []);
+  const [settings, setSettingsData] = useState<Settings | null>(() => Platform.OS === "web" ? getSettingsSync() : null);
   const [refreshing, setRefreshing] = useState(false);
-  const [flashSale, setFlashSale] = useState(false);
-  const [flashDuration, setFlashDuration] = useState(2);
-  const [flashSaleState, setFlashSaleStateData] = useState<FlashSaleState | null>(null);
+  const [flashSale, setFlashSale] = useState(!!initialFsState);
+  const [flashDuration, setFlashDuration] = useState(initialFsState?.duration || 2);
+  const [flashSaleState, setFlashSaleStateData] = useState<FlashSaleState | null>(initialFsState);
   const [countdown, setCountdown] = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareGroupIndex, setShareGroupIndex] = useState(0);
@@ -194,6 +198,10 @@ export default function ItemsScreen() {
       setFlashSale(false);
       setFlashSaleStateData(null);
     }
+  }, []);
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   useFocusEffect(
