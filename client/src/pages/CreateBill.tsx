@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   IoClose,
@@ -12,6 +12,8 @@ import {
   IoFlash,
   IoPerson,
   IoStorefrontOutline,
+  IoRefresh,
+  IoChevronDown,
 } from "react-icons/io5";
 import Colors from "@/constants/colors";
 import {
@@ -34,6 +36,31 @@ export default function CreateBillPage() {
   const [step, setStep] = useState<"details" | "items">("details");
   const [flashSaleState, setFlashSaleStateData] = useState<FlashSaleState | null>(null);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInputFocus = () => {
+    if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+    setIsInputFocused(true);
+  };
+  const handleInputBlur = () => {
+    focusTimeoutRef.current = setTimeout(() => setIsInputFocused(false), 200);
+  };
+  const dismissKeyboard = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setIsInputFocused(false);
+  };
+
+  const clearKgGrams = (id: string) => {
+    const newKg = new Map(kgValues);
+    newKg.set(id, { kg: "0", grams: "0" });
+    setKgValues(newKg);
+    const newSelected = new Map(selected);
+    newSelected.set(id, "0");
+    setSelected(newSelected);
+  };
 
   useEffect(() => {
     loadItems();
@@ -297,7 +324,8 @@ export default function CreateBillPage() {
                             inputMode="numeric"
                             value={kgValues.get(item.id)?.kg || "0"}
                             onChange={(e) => updateKgGrams(item.id, "kg", e.target.value.replace(/[^0-9]/g, ''))}
-                            onFocus={(e) => e.target.select()}
+                            onFocus={(e) => { e.target.select(); handleInputFocus(); }}
+                            onBlur={handleInputBlur}
                             enterKeyHint="next"
                           />
                           <span style={styles.kgGramsLabel}>Kg</span>
@@ -309,11 +337,19 @@ export default function CreateBillPage() {
                             inputMode="numeric"
                             value={kgValues.get(item.id)?.grams || "0"}
                             onChange={(e) => updateKgGrams(item.id, "grams", e.target.value.replace(/[^0-9]/g, ''))}
-                            onFocus={(e) => e.target.select()}
+                            onFocus={(e) => { e.target.select(); handleInputFocus(); }}
+                            onBlur={handleInputBlur}
                             enterKeyHint="done"
                           />
                           <span style={styles.kgGramsLabel}>gm</span>
                         </div>
+                        <button
+                          style={styles.clearBtn}
+                          onClick={() => clearKgGrams(item.id)}
+                          title="Clear"
+                        >
+                          <IoRefresh size={14} color={Colors.textLight} />
+                        </button>
                       </div>
                       <span style={styles.lineTotal}>
                         = {formatCurrencyShort(item.price * (
@@ -342,6 +378,8 @@ export default function CreateBillPage() {
                         inputMode="numeric"
                         value={qty}
                         onChange={(e) => updateQty(item.id, e.target.value.replace(/[^0-9]/g, ''))}
+                        onFocus={(e) => { e.target.select(); handleInputFocus(); }}
+                        onBlur={handleInputBlur}
                         enterKeyHint="done"
                       />
                       <button
@@ -362,6 +400,13 @@ export default function CreateBillPage() {
               );
             })}
           </div>
+        )}
+
+        {isInputFocused && (
+          <button style={styles.doneBtn} onClick={dismissKeyboard}>
+            <IoChevronDown size={16} color={Colors.white} />
+            <span style={styles.doneBtnText}>Done</span>
+          </button>
         )}
 
         {selected.size > 0 && (
@@ -598,23 +643,36 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 4,
   },
   kgGramsInput: {
-    width: 52,
-    height: 32,
-    borderRadius: 8,
+    width: 64,
+    height: 42,
+    borderRadius: 10,
     backgroundColor: Colors.surfaceElevated,
     textAlign: "center" as const,
-    fontSize: 15,
+    fontSize: 18,
     fontFamily: "Nunito",
     fontWeight: 700,
     color: Colors.text,
-    border: "none",
+    border: `1.5px solid ${Colors.border}`,
     outline: "none",
   },
   kgGramsLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Nunito",
-    fontWeight: 600,
+    fontWeight: 700,
     color: Colors.textSecondary,
+  },
+  clearBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.surfaceElevated,
+    border: `1px solid ${Colors.border}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    marginLeft: 4,
+    flexShrink: 0,
   },
   qtyLabel: {
     fontSize: 13,
@@ -623,27 +681,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: Colors.textSecondary,
   },
   qtyBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: Colors.surfaceElevated,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "none",
+    border: `1.5px solid ${Colors.border}`,
     cursor: "pointer",
   },
   qtyInput: {
-    width: 56,
-    height: 32,
-    borderRadius: 8,
+    width: 64,
+    height: 42,
+    borderRadius: 10,
     backgroundColor: Colors.surfaceElevated,
     textAlign: "center" as const,
-    fontSize: 15,
+    fontSize: 18,
     fontFamily: "Nunito",
     fontWeight: 700,
     color: Colors.text,
-    border: "none",
+    border: `1.5px solid ${Colors.border}`,
     outline: "none",
   },
   lineTotal: {
@@ -728,6 +786,31 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   createBtnText: {
     fontSize: 16,
+    fontFamily: "Nunito",
+    fontWeight: 700,
+    color: Colors.white,
+  },
+  doneBtn: {
+    position: "fixed" as const,
+    bottom: 140,
+    right: 20,
+    height: 40,
+    paddingLeft: 14,
+    paddingRight: 16,
+    borderRadius: 20,
+    backgroundColor: Colors.primaryDark,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    border: "none",
+    cursor: "pointer",
+    boxShadow: "0 3px 12px rgba(0,0,0,0.25)",
+    zIndex: 100,
+  },
+  doneBtnText: {
+    fontSize: 14,
     fontFamily: "Nunito",
     fontWeight: 700,
     color: Colors.white,
