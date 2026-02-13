@@ -77,8 +77,13 @@ function generateId(): string {
 }
 
 export async function getItems(): Promise<Item[]> {
-  const data = await AsyncStorage.getItem(KEYS.ITEMS);
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = await AsyncStorage.getItem(KEYS.ITEMS);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error("Failed to load items:", e);
+    return [];
+  }
 }
 
 export async function saveItem(item: Omit<Item, "id" | "createdAt" | "updatedAt">): Promise<Item> {
@@ -145,20 +150,25 @@ export async function startFlashSale(durationHours: number): Promise<FlashSaleSt
 }
 
 export async function endFlashSale(): Promise<void> {
-  const data = await AsyncStorage.getItem(KEYS.FLASH_SALE);
-  if (!data) return;
-  const state: FlashSaleState = JSON.parse(data);
-  if (Object.keys(state.originalPrices).length > 0) {
-    const items = await getItems();
-    const updated = items.map((item) => {
-      if (state.originalPrices[item.id] !== undefined) {
-        return { ...item, price: state.originalPrices[item.id], updatedAt: new Date().toISOString() };
-      }
-      return item;
-    });
-    await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(updated));
+  try {
+    const data = await AsyncStorage.getItem(KEYS.FLASH_SALE);
+    if (!data) return;
+    const state: FlashSaleState = JSON.parse(data);
+    if (Object.keys(state.originalPrices).length > 0) {
+      const items = await getItems();
+      const updated = items.map((item) => {
+        if (state.originalPrices[item.id] !== undefined) {
+          return { ...item, price: state.originalPrices[item.id], updatedAt: new Date().toISOString() };
+        }
+        return item;
+      });
+      await AsyncStorage.setItem(KEYS.ITEMS, JSON.stringify(updated));
+    }
+    await AsyncStorage.removeItem(KEYS.FLASH_SALE);
+  } catch (e) {
+    console.error("Failed to end flash sale:", e);
+    await AsyncStorage.removeItem(KEYS.FLASH_SALE);
   }
-  await AsyncStorage.removeItem(KEYS.FLASH_SALE);
 }
 
 export async function isFlashSaleActive(): Promise<boolean> {
@@ -253,20 +263,24 @@ export async function deleteBill(id: string): Promise<void> {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const data = await AsyncStorage.getItem(KEYS.SETTINGS);
-  if (data) {
-    const parsed = JSON.parse(data);
-    return {
-      upiId: parsed.upiId || "",
-      phonepeUpiId: parsed.phonepeUpiId || undefined,
-      gpayUpiId: parsed.gpayUpiId || undefined,
-      businessName: parsed.businessName || "",
-      phoneNumber: parsed.phoneNumber || "",
-      shopAddress: parsed.shopAddress || undefined,
-      whatsappGroups: parsed.whatsappGroups || [],
-      qrCodeImage: parsed.qrCodeImage || undefined,
-      paymentLink: parsed.paymentLink || undefined,
-    };
+  try {
+    const data = await AsyncStorage.getItem(KEYS.SETTINGS);
+    if (data) {
+      const parsed = JSON.parse(data);
+      return {
+        upiId: parsed.upiId || "",
+        phonepeUpiId: parsed.phonepeUpiId || undefined,
+        gpayUpiId: parsed.gpayUpiId || undefined,
+        businessName: parsed.businessName || "",
+        phoneNumber: parsed.phoneNumber || "",
+        shopAddress: parsed.shopAddress || undefined,
+        whatsappGroups: parsed.whatsappGroups || [],
+        qrCodeImage: parsed.qrCodeImage || undefined,
+        paymentLink: parsed.paymentLink || undefined,
+      };
+    }
+  } catch (e) {
+    console.error("Failed to load settings:", e);
   }
   return { upiId: "", businessName: "", phoneNumber: "", whatsappGroups: [], qrCodeImage: undefined, paymentLink: undefined };
 }
