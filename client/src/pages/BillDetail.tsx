@@ -47,8 +47,8 @@ export default function BillDetailPage() {
     setBill({ ...bill, paid: newPaid });
   };
 
-  const handleWhatsAppShare = () => {
-    if (!bill || !settings) return;
+  const buildBillMessage = (): string => {
+    if (!bill || !settings) return "";
     const date = new Date(bill.createdAt);
     const dateStr = date.toLocaleDateString("en-IN", {
       weekday: "short",
@@ -102,10 +102,6 @@ export default function BillDetailPage() {
       }
       msg += `🔗 ${payUrl}\n\n`;
       msg += `✅ _PhonePe / GPay / Paytm - any UPI app!_\n\n`;
-    } else if (settings.qrCodeImage) {
-      msg += `${"━".repeat(30)}\n`;
-      msg += `📱💳 *PAYMENT (UPI):*\n\n`;
-      msg += `📸 _QR code available - please ask for QR to scan & pay_\n\n`;
     }
 
     if (settings.phoneNumber) {
@@ -116,9 +112,48 @@ export default function BillDetailPage() {
     msg += `💚 _Thank you for shopping with us!_ 💚\n`;
     msg += `🙏 _Aapka bharosa hi hamari taakat hai_\n\n`;
     msg += `_Powered by *${businessName}*_ 🏪`;
+    return msg;
+  };
 
-    const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+  const dataUrlToFile = async (dataUrl: string, fileName: string): Promise<File> => {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], fileName, { type: blob.type || "image/png" });
+  };
+
+  const handleWhatsAppShare = async () => {
+    if (!bill || !settings) return;
+    const billMsg = buildBillMessage();
+    const hasQr = !!settings.qrCodeImage;
+
+    if (hasQr) {
+      try {
+        const qrFile = await dataUrlToFile(settings.qrCodeImage!, `payment-qr-${bill.billNumber}.png`);
+        const businessName = settings.businessName || "Apni Dukan";
+        const qrCaption = `📱💳 *${businessName} - Payment QR Code*\n\n🧾 Bill #${bill.billNumber}\n💰 Amount: ₹${formatCurrencyShort(bill.totalAmount).replace("₹", "")}\n\n👆 _Scan this QR code to pay via any UPI app_`;
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [qrFile] })) {
+          await navigator.share({
+            text: qrCaption,
+            files: [qrFile],
+          });
+          setTimeout(() => {
+            window.open(`https://wa.me/?text=${encodeURIComponent(billMsg)}`, "_blank");
+          }, 1000);
+        } else {
+          const link = document.createElement("a");
+          link.href = settings.qrCodeImage!;
+          link.download = `payment-qr-${bill.billNumber}.png`;
+          link.click();
+          window.alert("QR code image downloaded! Now sharing the bill message on WhatsApp...");
+          window.open(`https://wa.me/?text=${encodeURIComponent(billMsg)}`, "_blank");
+        }
+      } catch (err) {
+        window.open(`https://wa.me/?text=${encodeURIComponent(billMsg)}`, "_blank");
+      }
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(billMsg)}`, "_blank");
+    }
   };
 
   if (!bill) {
