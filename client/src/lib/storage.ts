@@ -329,6 +329,81 @@ export function generatePaymentPageUrl(upiId: string, name: string, amount: numb
   return url;
 }
 
+function getItemEmoji(name: string): string {
+  const n = name.toLowerCase();
+  const map: [string[], string][] = [
+    [["mango", "aam"], "🥭"],
+    [["apple", "seb"], "🍎"],
+    [["banana", "kela"], "🍌"],
+    [["orange", "santra", "narangi"], "🍊"],
+    [["grape", "angur", "angoor"], "🍇"],
+    [["watermelon", "tarbooz", "tarbuz"], "🍉"],
+    [["strawberry"], "🍓"],
+    [["pineapple", "ananas"], "🍍"],
+    [["coconut", "nariyal"], "🥥"],
+    [["lemon", "nimbu", "lime", "mosambi"], "🍋"],
+    [["cherry"], "🍒"],
+    [["peach", "aadu", "aaru"], "🍑"],
+    [["pear", "nashpati"], "🍐"],
+    [["pomegranate", "anar", "anaar"], "🫐"],
+    [["papaya", "papita"], "🍈"],
+    [["guava", "amrud", "amrood"], "🍏"],
+    [["tomato", "tamatar"], "🍅"],
+    [["potato", "aloo", "aaloo"], "🥔"],
+    [["onion", "pyaz", "pyaaz", "kanda"], "🧅"],
+    [["garlic", "lehsun", "lahsun"], "🧄"],
+    [["carrot", "gajar"], "🥕"],
+    [["corn", "makka", "makkai", "bhutta"], "🌽"],
+    [["brinjal", "baingan", "eggplant"], "🍆"],
+    [["chilli", "mirch", "mirchi", "pepper"], "🌶️"],
+    [["cucumber", "kheera", "kakdi"], "🥒"],
+    [["peas", "matar"], "🫛"],
+    [["mushroom", "khumbi"], "🍄"],
+    [["ginger", "adrak"], "🫚"],
+    [["cabbage", "patta gobhi", "gobhi", "gobi", "cauliflower"], "🥬"],
+    [["spinach", "palak"], "🥬"],
+    [["radish", "muli", "mooli"], "🫚"],
+    [["bean", "sem"], "🫘"],
+    [["sweet potato", "shakarkand"], "🍠"],
+    [["milk", "doodh", "dudh"], "🥛"],
+    [["egg", "anda"], "🥚"],
+    [["bread", "roti"], "🍞"],
+    [["rice", "chawal", "chaaval"], "🍚"],
+    [["cheese", "paneer"], "🧀"],
+    [["butter", "makhan"], "🧈"],
+    [["honey", "shahad", "shehad"], "🍯"],
+    [["oil", "tel"], "🫒"],
+    [["sugar", "cheeni"], "🍬"],
+    [["tea", "chai", "patti"], "🍵"],
+    [["coffee"], "☕"],
+    [["curd", "dahi", "yogurt"], "🥛"],
+    [["fish", "machhi", "machhli"], "🐟"],
+    [["chicken", "murga", "murgi"], "🍗"],
+    [["meat", "gosht", "mutton"], "🥩"],
+  ];
+  for (const [keywords, emoji] of map) {
+    if (keywords.some((k) => n.includes(k))) return emoji;
+  }
+  const fruitWords = ["fruit", "phal", "fal"];
+  const vegWords = ["sabzi", "sabji", "vegetable", "bhaji"];
+  if (fruitWords.some((w) => n.includes(w))) return "🍎";
+  if (vegWords.some((w) => n.includes(w))) return "🥬";
+  return "🛒";
+}
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "🌅 Good Morning";
+  if (h < 17) return "☀️ Good Afternoon";
+  return "🌆 Good Evening";
+}
+
+function getDayEmoji(): string {
+  const day = new Date().getDay();
+  const emojis = ["🌟", "💪", "✨", "🎯", "🔥", "🎉", "💫"];
+  return emojis[day];
+}
+
 export function generateWhatsAppMessage(
   items: Item[],
   businessName: string,
@@ -342,7 +417,9 @@ export function generateWhatsAppMessage(
 ): string {
   const name = businessName || "Apni Dukan";
   const today = new Date();
-  const dateStr = today.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const dateStr = today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const greeting = getGreeting();
+  const dayEmoji = getDayEmoji();
 
   let msg = "";
 
@@ -350,45 +427,83 @@ export function generateWhatsAppMessage(
     const timeOpts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
     let timeRange = "";
     if (flashSaleStartTime && flashSaleEndTime) {
-      timeRange = `${new Date(flashSaleStartTime).toLocaleTimeString("en-IN", timeOpts)} to ${new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts)}`;
+      timeRange = `${new Date(flashSaleStartTime).toLocaleTimeString("en-IN", timeOpts)} - ${new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts)}`;
     }
-    msg += `\u26A1 *${name} - FLASH SALE!* \u26A1\n`;
-    if (timeRange) msg += `\u23F0 _${timeRange} only!_\n`;
-    else msg += `\u23F0 _Exclusive prices for next ${flashDuration} ${flashDuration === 1 ? "hour" : "hours"} only!_\n`;
-    msg += `\uD83D\uDCC5 ${dateStr}\n\n${"━".repeat(28)}\n\n\uD83D\uDD25 *TODAY'S SPECIAL PRICES* \uD83D\uDD25\n\n`;
+
+    msg += `🚨🚨🚨 *FLASH SALE* 🚨🚨🚨\n\n`;
+    msg += `⚡⚡ *${name}* ⚡⚡\n`;
+    msg += `${"─".repeat(30)}\n\n`;
+    msg += `${greeting}! ${dayEmoji}\n\n`;
+    msg += `🔥🔥 *MEGA FLASH SALE IS LIVE!* 🔥🔥\n\n`;
+    if (timeRange) {
+      msg += `⏰ *${timeRange} ONLY!*\n`;
+    } else {
+      msg += `⏰ *Next ${flashDuration} ${flashDuration === 1 ? "hour" : "hours"} ONLY!*\n`;
+    }
+    msg += `💨 _Jaldi karo! Prices won't last!_\n\n`;
+    msg += `📅 ${dateStr}\n\n`;
+    msg += `${"━".repeat(30)}\n`;
+    msg += `🏷️ *TODAY'S SPECIAL PRICES* 🏷️\n`;
+    msg += `${"━".repeat(30)}\n\n`;
   } else {
-    msg += `\uD83D\uDED2 *${name}* \uD83D\uDED2\n\uD83D\uDCC5 ${dateStr}\n\n${"━".repeat(28)}\n\n\uD83C\uDF3F *TODAY'S PRICE LIST* \uD83C\uDF3F\n\n`;
+    msg += `${greeting}! ${dayEmoji}\n\n`;
+    msg += `🏪✨ *${name}* ✨🏪\n`;
+    msg += `${"─".repeat(30)}\n\n`;
+    msg += `📅 ${dateStr}\n\n`;
+    msg += `${"━".repeat(30)}\n`;
+    msg += `🌿🍎 *AAJ KI TAZA RATE LIST* 🥬🍅\n`;
+    msg += `${"━".repeat(30)}\n\n`;
   }
 
   items.forEach((item, idx) => {
+    const emoji = getItemEmoji(item.name);
     const priceLabel = getPricingLabel(item.pricingType);
-    const price = formatCurrencyShort(item.price);
+    const priceNum = item.price;
+    const priceStr = priceNum === Math.floor(priceNum) ? priceNum.toString() : priceNum.toFixed(2);
     const origPrice = originalPrices?.[item.id];
     const hasPriceChanged = flashSale && origPrice !== undefined && origPrice !== item.price;
-    msg += `${idx + 1}. *${item.name}*\n`;
-    if (hasPriceChanged) msg += `   ~${formatCurrencyShort(origPrice)}${priceLabel}~  \u27A1  \uD83D\uDCB0 *${price}${priceLabel}*`;
-    else msg += `   \uD83D\uDCB0 ${price}${priceLabel}`;
-    if (item.quantity) msg += `  |  \uD83D\uDCE6 ${item.quantity} available`;
-    msg += `\n\n`;
+
+    msg += `${emoji} *${item.name}*\n`;
+    if (hasPriceChanged) {
+      const origStr = origPrice === Math.floor(origPrice) ? origPrice.toString() : origPrice.toFixed(2);
+      msg += `     ~💰 ₹${origStr}${priceLabel}~\n`;
+      msg += `     ✅ *₹${priceStr}${priceLabel}* 🎉 SAVE ₹${(origPrice - priceNum).toFixed(0)}!\n`;
+    } else {
+      msg += `     💰 *₹${priceStr}*${priceLabel}\n`;
+    }
+    if (item.quantity) {
+      msg += `     📦 _${item.quantity} available_\n`;
+    }
+    if (idx < items.length - 1) msg += `\n`;
   });
 
-  msg += `${"━".repeat(28)}\n\n`;
+  msg += `\n${"━".repeat(30)}\n\n`;
 
   if (flashSale) {
     const timeOpts2: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
+    msg += `🚨 *DON'T MISS OUT!* 🚨\n`;
     if (flashSaleStartTime && flashSaleEndTime) {
-      msg += `\u23F0 *Offer valid: ${new Date(flashSaleStartTime).toLocaleTimeString("en-IN", timeOpts2)} - ${new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts2)}*\n`;
+      msg += `⏰ Sale ends: *${new Date(flashSaleEndTime).toLocaleTimeString("en-IN", timeOpts2)}*\n`;
     } else {
       const endTime = new Date(today.getTime() + flashDuration * 60 * 60 * 1000);
-      msg += `\u23F0 *Offer valid till ${endTime.toLocaleTimeString("en-IN", timeOpts2)}*\n`;
+      msg += `⏰ Sale ends: *${endTime.toLocaleTimeString("en-IN", timeOpts2)}*\n`;
     }
-    msg += `\u26A1 _Hurry! Limited time offer!_ \u26A1\n\n`;
+    msg += `⚡ _Pehle aao pehle paao!_ ⚡\n\n`;
   }
 
-  if (shopAddress) msg += `\uD83D\uDCCD *Address:* ${shopAddress}\n`;
-  if (phoneNumber) msg += `\uD83D\uDCDE *Contact:* ${phoneNumber}\n`;
-  if (shopAddress || phoneNumber) msg += `\n`;
+  msg += `🛍️ *ORDER KAISE KAREIN?*\n`;
+  msg += `${"─".repeat(30)}\n`;
+  if (phoneNumber) {
+    msg += `📞 Call/WhatsApp: *${phoneNumber}*\n`;
+  }
+  if (shopAddress) {
+    msg += `📍 Visit: _${shopAddress}_\n`;
+  }
+  msg += `🚚 _Home delivery available!_\n\n`;
 
-  msg += `\uD83D\uDED2 _Order now! Contact us for delivery_\n\n_Sent via ${name}_`;
+  msg += `${"─".repeat(30)}\n`;
+  msg += `💚 _Taza maal, sahi daam!_ 💚\n`;
+  msg += `🙏 _Aapka bharosa hi hamari taakat hai_\n\n`;
+  msg += `_Powered by *${name}*_ 🏪`;
   return msg;
 }

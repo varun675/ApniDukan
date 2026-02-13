@@ -51,39 +51,58 @@ export default function BillDetailPage() {
     if (!bill || !settings) return;
     const date = new Date(bill.createdAt);
     const dateStr = date.toLocaleDateString("en-IN", {
+      weekday: "short",
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
+    });
+    const timeStr = date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
     const businessName = settings.businessName || "Apni Dukan";
 
-    let msg = `🧾 *${businessName} - Bill #${bill.billNumber}*\n`;
-    msg += `📅 ${dateStr}\n`;
-    msg += `👤 ${bill.customerName}`;
-    if (bill.flatNumber) msg += ` | 🏠 ${bill.flatNumber}`;
-    msg += `\n\n${"━".repeat(28)}\n\n`;
+    let msg = `🧾✨ *${businessName}* ✨🧾\n`;
+    msg += `${"─".repeat(30)}\n`;
+    msg += `📋 *BILL #${bill.billNumber}*\n`;
+    msg += `📅 ${dateStr} | 🕐 ${timeStr}\n\n`;
+
+    msg += `👤 *Customer:* ${bill.customerName}\n`;
+    if (bill.flatNumber) msg += `🏠 *Flat/Address:* ${bill.flatNumber}\n`;
+    msg += `\n${"━".repeat(30)}\n`;
+    msg += `🛒 *ITEMS PURCHASED*\n`;
+    msg += `${"━".repeat(30)}\n\n`;
 
     bill.items.forEach((item, idx) => {
       const label = getPricingLabel(item.pricingType);
-      msg += `${idx + 1}. ${item.name}\n`;
-      msg += `   ${item.quantity} x ${formatCurrencyShort(item.price)}${label} = ${formatCurrencyShort(item.total)}\n`;
+      msg += `${idx + 1}. *${item.name}*\n`;
+      msg += `     ${item.quantity} x 💰₹${formatCurrencyShort(item.price).replace("₹", "")}${label}\n`;
+      msg += `     ✅ *₹${formatCurrencyShort(item.total).replace("₹", "")}*\n`;
+      if (idx < bill.items.length - 1) msg += `\n`;
     });
 
-    msg += `\n${"━".repeat(28)}\n`;
-    msg += `💰 *Total: ${formatCurrencyShort(bill.totalAmount)}*\n`;
-    msg += `📌 Status: ${bill.paid ? "✅ Paid" : "⏳ Pending"}\n\n`;
+    msg += `\n${"━".repeat(30)}\n\n`;
+    msg += `💵💵 *GRAND TOTAL: ₹${formatCurrencyShort(bill.totalAmount).replace("₹", "")}* 💵💵\n\n`;
+    msg += `📌 Status: ${bill.paid ? "✅ *PAID* - Thank You! 🙏" : "⏳ *PAYMENT PENDING*"}\n\n`;
 
-    if (settings.upiId) {
+    if (!bill.paid && settings.upiId) {
       const payUrl = generatePaymentPageUrl(
         settings.upiId,
         businessName,
         bill.totalAmount,
         `Bill ${bill.billNumber}`
       );
-      msg += `💳 *Pay Online:*\n${payUrl}\n\n`;
+      msg += `${"─".repeat(30)}\n`;
+      msg += `📱 *PAY ONLINE (UPI):*\n`;
+      msg += `👇 _Tap the link below to pay instantly_\n`;
+      msg += `${payUrl}\n\n`;
     }
 
-    msg += `_Sent via ${businessName}_`;
+    msg += `${"─".repeat(30)}\n`;
+    msg += `💚 _Thank you for shopping with us!_ 💚\n`;
+    msg += `🙏 _Aapka bharosa hi hamari taakat hai_\n\n`;
+    msg += `_Powered by *${businessName}*_ 🏪`;
 
     const encoded = encodeURIComponent(msg);
     window.open(`https://wa.me/?text=${encoded}`, "_blank");
