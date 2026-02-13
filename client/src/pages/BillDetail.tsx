@@ -102,6 +102,10 @@ export default function BillDetailPage() {
       }
       msg += `🔗 ${payUrl}\n\n`;
       msg += `✅ _PhonePe / GPay / Paytm - any UPI app!_\n\n`;
+    } else if (settings.qrCodeImage) {
+      msg += `${"━".repeat(30)}\n`;
+      msg += `📱💳 *PAYMENT (UPI):*\n\n`;
+      msg += `📸 _QR code available - please ask for QR to scan & pay_\n\n`;
     }
 
     if (settings.phoneNumber) {
