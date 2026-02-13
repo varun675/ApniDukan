@@ -5,7 +5,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
   Platform,
   Linking,
   Image,
@@ -19,6 +18,7 @@ import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import QRCode from "react-native-qrcode-svg";
 import Colors from "@/constants/colors";
+import { showAlert } from "@/lib/alert";
 import {
   getBills,
   getSettings,
@@ -157,7 +157,7 @@ export default function BillDetailScreen() {
   const handleOpenUPI = async () => {
     const upiIdToUse = settings?.phonepeUpiId || settings?.gpayUpiId || settings?.upiId;
     if (!bill || !upiIdToUse) {
-      Alert.alert("No UPI ID", "Please set your UPI ID in Settings first.");
+      showAlert("No UPI ID", "Please set your UPI ID in Settings first.");
       return;
     }
     const bDate = new Date(bill.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
@@ -166,7 +166,7 @@ export default function BillDetailScreen() {
     try {
       await Linking.openURL(upiLink);
     } catch {
-      Alert.alert("UPI App", "No UPI app found. Share the payment link via WhatsApp instead.");
+      showAlert("UPI App", "No UPI app found. Share the payment link via WhatsApp instead.");
     }
   };
 

@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   Platform,
   Keyboard,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { showAlert } from "@/lib/alert";
 import {
   getDailyAccount,
   saveDailyAccount,
@@ -64,12 +64,12 @@ export default function AccountsScreen() {
 
   const handleAddExpense = async () => {
     if (!expenseDesc.trim() || !expenseAmt.trim()) {
-      Alert.alert("Missing Info", "Enter expense description and amount.");
+      showAlert("Missing Info", "Enter expense description and amount.");
       return;
     }
     const amount = parseFloat(expenseAmt);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert("Invalid Amount", "Enter a valid amount.");
+      showAlert("Invalid Amount", "Enter a valid amount.");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function AccountsScreen() {
   const handleUpdateSale = async () => {
     const amount = parseFloat(saleAmt);
     if (isNaN(amount) || amount < 0) {
-      Alert.alert("Invalid Amount", "Enter a valid sale amount.");
+      showAlert("Invalid Amount", "Enter a valid sale amount.");
       return;
     }
 

@@ -5,7 +5,6 @@ import {
   View,
   SectionList,
   Pressable,
-  Alert,
   Platform,
   RefreshControl,
 } from "react-native";
@@ -14,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { showConfirm } from "@/lib/alert";
 import {
   getBills,
   deleteBill,
@@ -54,19 +54,12 @@ export default function BillsScreen() {
   };
 
   const handleDelete = (bill: Bill) => {
-    Alert.alert("Delete Bill", `Remove bill for "${bill.customerName}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteBill(bill.id);
-          if (Platform.OS !== "web")
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadBills();
-        },
-      },
-    ]);
+    showConfirm("Delete Bill", `Remove bill for "${bill.customerName}"?`, async () => {
+      await deleteBill(bill.id);
+      if (Platform.OS !== "web")
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      loadBills();
+    }, "Delete");
   };
 
   const formatTime = (dateStr: string) => {

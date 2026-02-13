@@ -20,6 +20,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { showAlert, showConfirm } from "@/lib/alert";
 import {
   getItems,
   deleteItem,
@@ -257,7 +258,7 @@ export default function ItemsScreen() {
 
   const shareToWhatsApp = async () => {
     if (items.length === 0) {
-      Alert.alert("No Items", "Add some items first to share.");
+      showAlert("No Items", "Add some items first to share.");
       return;
     }
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -412,7 +413,7 @@ export default function ItemsScreen() {
                       if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       const state = await startFlashSale(flashDuration);
                       setFlashSaleStateData(state);
-                      Alert.alert(
+                      showAlert(
                         "Flash Sale Started",
                         `Flash sale is now active for ${flashDuration} hour${flashDuration > 1 ? "s" : ""}. You can now update item prices for the sale. Prices will automatically revert when the sale ends.`,
                       );
@@ -447,24 +448,18 @@ export default function ItemsScreen() {
               </View>
               <Pressable
                 onPress={() => {
-                  Alert.alert(
+                  showConfirm(
                     "End Flash Sale?",
                     "This will stop the flash sale and revert all prices to their original values.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "End Sale",
-                        style: "destructive",
-                        onPress: async () => {
-                          await endFlashSale();
-                          setFlashSale(false);
-                          setFlashSaleStateData(null);
-                          setCountdown("");
-                          if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          loadData();
-                        },
-                      },
-                    ],
+                    async () => {
+                      await endFlashSale();
+                      setFlashSale(false);
+                      setFlashSaleStateData(null);
+                      setCountdown("");
+                      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      loadData();
+                    },
+                    "End Sale",
                   );
                 }}
                 style={styles.endFlashBtn}

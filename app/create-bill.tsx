@@ -6,7 +6,6 @@ import {
   FlatList,
   TextInput,
   Pressable,
-  Alert,
   Platform,
   Keyboard,
   KeyboardAvoidingView,
@@ -18,6 +17,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { showAlert, showConfirm } from "@/lib/alert";
 import {
   getItems,
   saveBill,
@@ -211,15 +211,15 @@ export default function CreateBillScreen() {
 
   const handleNext = () => {
     if (!customerName.trim()) {
-      Alert.alert("Customer Name", "Please enter the customer name.");
+      showAlert("Customer Name", "Please enter the customer name.");
       return;
     }
     if (!flatNumber.trim()) {
-      Alert.alert("Flat Number", "Please enter the flat number.");
+      showAlert("Flat Number", "Please enter the flat number.");
       return;
     }
     if (items.length === 0) {
-      Alert.alert("No Items", "Please add items to your catalog first.");
+      showAlert("No Items", "Please add items to your catalog first.");
       return;
     }
     setStep("items");
@@ -238,27 +238,13 @@ export default function CreateBillScreen() {
       loadItems();
     };
 
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm(`Remove "${item.name}" from your catalog?`);
-      if (confirmed) {
-        await doDelete();
-      }
-    } else {
-      Alert.alert("Delete Item", `Remove "${item.name}" from your catalog?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: doDelete,
-        },
-      ]);
-    }
+    showConfirm("Delete Item", `Remove "${item.name}" from your catalog?`, doDelete, "Delete");
   };
 
   const handleCreateBill = async () => {
     const billItems = getSelectedItems();
     if (billItems.length === 0) {
-      Alert.alert("No Items Selected", "Please select at least one item.");
+      showAlert("No Items Selected", "Please select at least one item.");
       return;
     }
 

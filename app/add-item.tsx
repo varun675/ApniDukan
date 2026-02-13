@@ -5,7 +5,6 @@ import {
   View,
   TextInput,
   Pressable,
-  Alert,
   Platform,
   Keyboard,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { showAlert } from "@/lib/alert";
 import { saveItem, updateItem, getItems } from "@/lib/storage";
 
 type PricingType = "per_kg" | "per_unit" | "per_piece" | "per_dozen";
@@ -56,11 +56,11 @@ export default function AddItemScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Missing Name", "Please enter the item name.");
+      showAlert("Missing Name", "Please enter the item name.");
       return;
     }
     if (!price.trim() || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      Alert.alert("Invalid Price", "Please enter a valid price.");
+      showAlert("Invalid Price", "Please enter a valid price.");
       return;
     }
 

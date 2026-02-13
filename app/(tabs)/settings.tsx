@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
+import { showAlert, showConfirm } from "@/lib/alert";
 import { getSettings, saveSettings, Settings } from "@/lib/storage";
 
 export default function SettingsScreen() {
@@ -63,7 +64,7 @@ export default function SettingsScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Needed", "Please allow camera access to take a photo of your QR code.");
+      showAlert("Permission Needed", "Please allow camera access to take a photo of your QR code.");
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -81,7 +82,7 @@ export default function SettingsScreen() {
   const pickFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Needed", "Please allow gallery access to select your QR code image.");
+      showAlert("Permission Needed", "Please allow gallery access to select your QR code image.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,17 +98,10 @@ export default function SettingsScreen() {
   };
 
   const handleRemoveQR = () => {
-    Alert.alert("Remove QR Code", "Are you sure you want to remove your payment QR code?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => {
-          setSettingsState({ ...settings, qrCodeImage: undefined });
-          if (Platform.OS !== "web") Haptics.selectionAsync();
-        },
-      },
-    ]);
+    showConfirm("Remove QR Code", "Are you sure you want to remove your payment QR code?", () => {
+      setSettingsState({ ...settings, qrCodeImage: undefined });
+      if (Platform.OS !== "web") Haptics.selectionAsync();
+    }, "Remove");
   };
 
   const handleSave = async () => {
