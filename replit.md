@@ -14,6 +14,11 @@ Apni Dukan is a mobile-first grocery shop management Progressive Web App (PWA) b
 - Replaced react-native-qrcode-svg with qrcode.react (QRCodeSVG)
 - Server now uses Vite middleware in development, serves built React app in production
 - All app UI served on port 5000 through Express + Vite middleware
+- Bill retention extended from 7 days to 90 days
+- Settings auto-save on every change (800ms debounce, no manual Save button)
+- Data backup/restore: Export all data as JSON file, import from backup file (in Settings > Data Backup)
+- Bills search now works by customer name AND bill number
+- Accounts page shows auto-calculated daily sales from bills with "Use this" button
 
 ## User Preferences
 
