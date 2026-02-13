@@ -184,8 +184,8 @@ export function getBills(): Bill[] {
   const data = localStorage.getItem(KEYS.BILLS);
   if (!data) return [];
   const bills: Bill[] = JSON.parse(data);
-  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const filtered = bills.filter((b) => new Date(b.createdAt).getTime() > oneWeekAgo);
+  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const filtered = bills.filter((b) => new Date(b.createdAt).getTime() > ninetyDaysAgo);
   if (filtered.length !== bills.length) {
     setJSON(KEYS.BILLS, filtered);
   }
