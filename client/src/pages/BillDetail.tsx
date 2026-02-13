@@ -78,25 +78,34 @@ export default function BillDetailPage() {
       const label = getPricingLabel(item.pricingType);
       msg += `${idx + 1}. *${item.name}*\n`;
       msg += `     ${item.quantity} x 💰₹${formatCurrencyShort(item.price).replace("₹", "")}${label}\n`;
-      msg += `     ✅ *₹${formatCurrencyShort(item.total).replace("₹", "")}*\n`;
+      msg += `     ✅ *💰₹${formatCurrencyShort(item.total).replace("₹", "")}*\n`;
       if (idx < bill.items.length - 1) msg += `\n`;
     });
 
     msg += `\n${"━".repeat(30)}\n\n`;
-    msg += `💵💵 *GRAND TOTAL: ₹${formatCurrencyShort(bill.totalAmount).replace("₹", "")}* 💵💵\n\n`;
+    msg += `💵💵 *GRAND TOTAL: 💰₹${formatCurrencyShort(bill.totalAmount).replace("₹", "")}* 💵💵\n\n`;
     msg += `📌 Status: ${bill.paid ? "✅ *PAID* - Thank You! 🙏" : "⏳ *PAYMENT PENDING*"}\n\n`;
 
-    if (!bill.paid && settings.upiId) {
+    if (settings.upiId) {
       const payUrl = generatePaymentPageUrl(
         settings.upiId,
         businessName,
         bill.totalAmount,
         `Bill ${bill.billNumber}`
       );
-      msg += `${"─".repeat(30)}\n`;
-      msg += `📱 *PAY ONLINE (UPI):*\n`;
-      msg += `👇 _Tap the link below to pay instantly_\n`;
-      msg += `${payUrl}\n\n`;
+      msg += `${"━".repeat(30)}\n`;
+      if (!bill.paid) {
+        msg += `📱💳 *PAY ONLINE (UPI):*\n\n`;
+        msg += `👇 _Tap below to pay 💰₹${formatCurrencyShort(bill.totalAmount).replace("₹", "")} instantly_\n`;
+      } else {
+        msg += `📱💳 *PAYMENT LINK:*\n\n`;
+      }
+      msg += `🔗 ${payUrl}\n\n`;
+      msg += `✅ _PhonePe / GPay / Paytm - any UPI app!_\n\n`;
+    }
+
+    if (settings.phoneNumber) {
+      msg += `📞 Questions? Call: *${settings.phoneNumber}*\n\n`;
     }
 
     msg += `${"─".repeat(30)}\n`;
