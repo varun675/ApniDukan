@@ -43,8 +43,10 @@ export default function BillsPage() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
+    const q = searchQuery.toLowerCase();
     const filtered = sorted.filter((bill) =>
-      bill.customerName.toLowerCase().includes(searchQuery.toLowerCase())
+      bill.customerName.toLowerCase().includes(q) ||
+      (bill.billNumber && bill.billNumber.toLowerCase().includes(q))
     );
 
     const groups = new Map<string, Bill[]>();
@@ -91,7 +93,7 @@ export default function BillsPage() {
           <IoSearch size={18} color={Colors.textLight} />
           <input
             type="text"
-            placeholder="Search by customer name..."
+            placeholder="Search by name or bill number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={styles.searchInput}

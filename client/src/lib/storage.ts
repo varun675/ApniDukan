@@ -329,6 +329,51 @@ export function generatePaymentPageUrl(upiId: string, name: string, amount: numb
   return url;
 }
 
+export function exportAllData(): string {
+  const data = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    items: getItems(),
+    bills: getBills(),
+    settings: getSettings(),
+    dailyAccounts: getDailyAccounts(),
+    flashSale: getFlashSaleState(),
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+export function importAllData(jsonStr: string): { success: boolean; message: string } {
+  try {
+    const data = JSON.parse(jsonStr);
+    if (!data.version || !data.exportDate) {
+      return { success: false, message: "Invalid backup file format" };
+    }
+    if (data.items && Array.isArray(data.items)) {
+      setJSON(KEYS.ITEMS, data.items);
+    }
+    if (data.bills && Array.isArray(data.bills)) {
+      setJSON(KEYS.BILLS, data.bills);
+    }
+    if (data.settings) {
+      setJSON(KEYS.SETTINGS, data.settings);
+    }
+    if (data.dailyAccounts && Array.isArray(data.dailyAccounts)) {
+      setJSON(KEYS.DAILY_ACCOUNTS, data.dailyAccounts);
+    }
+    if (data.flashSale) {
+      setJSON(KEYS.FLASH_SALE, data.flashSale);
+    }
+    return { success: true, message: `Data restored from ${new Date(data.exportDate).toLocaleDateString("en-IN")} backup` };
+  } catch {
+    return { success: false, message: "Could not read backup file. Make sure it's a valid Apni Dukan backup." };
+  }
+}
+
+export function getBillsForDate(dateKey: string): Bill[] {
+  const bills = getBills();
+  return bills.filter((b) => new Date(b.createdAt).toISOString().split("T")[0] === dateKey);
+}
+
 function getItemEmoji(name: string): string {
   const n = name.toLowerCase();
   const map: [string[], string][] = [

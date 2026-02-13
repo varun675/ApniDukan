@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Colors from "@/constants/colors";
-import { getSettings, saveSettings } from "@/lib/storage";
+import { getSettings, saveSettings, exportAllData, importAllData } from "@/lib/storage";
 import type { Settings } from "@/lib/storage";
 import {
   IoStorefrontOutline,
@@ -12,6 +12,9 @@ import {
   IoPeople,
   IoAdd,
   IoClose,
+  IoCloudDownloadOutline,
+  IoCloudUploadOutline,
+  IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 
 function generateId(): string {
@@ -25,19 +28,33 @@ export default function SettingsPage() {
     phoneNumber: "",
     whatsappGroups: [],
   });
-  const [saved, setSaved] = useState(false);
+  const [autoSaveMsg, setAutoSaveMsg] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
+  const [importMsg, setImportMsg] = useState<{ text: string; success: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const s = getSettings();
     setSettings(s);
   }, []);
 
-  const handleSave = () => {
-    saveSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const triggerAutoSave = useCallback((newSettings: Settings) => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      saveSettings(newSettings);
+      setAutoSaveMsg("Saved");
+      setTimeout(() => setAutoSaveMsg(""), 1500);
+    }, 800);
+  }, []);
+
+  const updateSettings = (updater: (prev: Settings) => Settings) => {
+    setSettings((prev) => {
+      const next = updater(prev);
+      triggerAutoSave(next);
+      return next;
+    });
   };
 
   const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,19 +63,19 @@ export default function SettingsPage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result as string;
-      setSettings((prev) => ({ ...prev, qrCodeImage: result }));
+      updateSettings((prev) => ({ ...prev, qrCodeImage: result }));
     };
     reader.readAsDataURL(file);
   };
 
   const removeQr = () => {
-    setSettings((prev) => ({ ...prev, qrCodeImage: undefined }));
+    updateSettings((prev) => ({ ...prev, qrCodeImage: undefined }));
   };
 
   const addGroup = () => {
     const name = newGroupName.trim();
     if (!name) return;
-    setSettings((prev) => ({
+    updateSettings((prev) => ({
       ...prev,
       whatsappGroups: [...prev.whatsappGroups, { id: generateId(), name }],
     }));
@@ -66,10 +83,41 @@ export default function SettingsPage() {
   };
 
   const removeGroup = (id: string) => {
-    setSettings((prev) => ({
+    updateSettings((prev) => ({
       ...prev,
       whatsappGroups: prev.whatsappGroups.filter((g) => g.id !== id),
     }));
+  };
+
+  const handleExport = () => {
+    const json = exportAllData();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `apnidukan_backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const result = importAllData(text);
+      setImportMsg({ text: result.message, success: result.success });
+      if (result.success) {
+        const s = getSettings();
+        setSettings(s);
+      }
+      setTimeout(() => setImportMsg(null), 4000);
+    };
+    reader.readAsText(file);
+    if (importInputRef.current) importInputRef.current.value = "";
   };
 
   const sectionHeader: React.CSSProperties = {
@@ -143,28 +191,47 @@ export default function SettingsPage() {
           padding: "24px 16px 40px",
         }}
       >
-        <div style={{ marginBottom: 24 }}>
-          <h1
-            style={{
-              fontSize: 26,
-              fontWeight: 800,
-              color: Colors.text,
-              margin: 0,
-              fontFamily: "Nunito",
-            }}
-          >
-            Settings
-          </h1>
-          <p
-            style={{
+        <div style={{ marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h1
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: Colors.text,
+                margin: 0,
+                fontFamily: "Nunito",
+              }}
+            >
+              Settings
+            </h1>
+            <p
+              style={{
+                fontSize: 13,
+                color: Colors.textSecondary,
+                margin: "4px 0 0",
+                fontFamily: "Nunito",
+              }}
+            >
+              Apni Dukan configuration
+            </p>
+          </div>
+          {autoSaveMsg && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              background: "#E8F5E9",
+              color: Colors.success,
+              padding: "6px 12px",
+              borderRadius: 8,
               fontSize: 13,
-              color: Colors.textSecondary,
-              margin: "4px 0 0",
+              fontWeight: 600,
               fontFamily: "Nunito",
-            }}
-          >
-            Apni Dukan configuration
-          </p>
+            }}>
+              <IoCheckmarkCircle size={14} />
+              {autoSaveMsg}
+            </div>
+          )}
         </div>
 
         <div style={card}>
@@ -178,7 +245,7 @@ export default function SettingsPage() {
             style={input}
             value={settings.businessName}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, businessName: e.target.value }))
+              updateSettings((prev) => ({ ...prev, businessName: e.target.value }))
             }
             placeholder="Your business name"
             enterKeyHint="next"
@@ -191,7 +258,7 @@ export default function SettingsPage() {
             style={input}
             value={settings.phoneNumber}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, phoneNumber: e.target.value }))
+              updateSettings((prev) => ({ ...prev, phoneNumber: e.target.value }))
             }
             placeholder="Your phone number"
             inputMode="tel"
@@ -205,7 +272,7 @@ export default function SettingsPage() {
             style={textarea}
             value={settings.shopAddress || ""}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, shopAddress: e.target.value }))
+              updateSettings((prev) => ({ ...prev, shopAddress: e.target.value }))
             }
             placeholder="Your shop address"
           />
@@ -225,7 +292,7 @@ export default function SettingsPage() {
             style={input}
             value={settings.phonepeUpiId || ""}
             onChange={(e) =>
-              setSettings((prev) => ({
+              updateSettings((prev) => ({
                 ...prev,
                 phonepeUpiId: e.target.value,
               }))
@@ -241,7 +308,7 @@ export default function SettingsPage() {
             style={input}
             value={settings.gpayUpiId || ""}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, gpayUpiId: e.target.value }))
+              updateSettings((prev) => ({ ...prev, gpayUpiId: e.target.value }))
             }
             placeholder="yourname@okaxis"
           />
@@ -254,7 +321,7 @@ export default function SettingsPage() {
             style={input}
             value={settings.upiId}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, upiId: e.target.value }))
+              updateSettings((prev) => ({ ...prev, upiId: e.target.value }))
             }
             placeholder="yourname@upi"
           />
@@ -430,36 +497,85 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          style={{
-            width: "100%",
-            padding: "14px",
-            borderRadius: 12,
-            border: "none",
-            background: saved ? Colors.success : Colors.primary,
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: 700,
-            fontFamily: "Nunito",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            marginBottom: 32,
-            transition: "background 0.3s",
-          }}
-        >
-          {saved ? (
-            <>
-              <IoCheckmarkCircle size={20} />
-              Settings Saved!
-            </>
-          ) : (
-            "Save Settings"
+        <div style={card}>
+          <div style={sectionHeader}>
+            <IoShieldCheckmarkOutline size={20} color={Colors.primary} />
+            <span>Data Backup</span>
+          </div>
+
+          <p style={{ fontSize: 13, color: Colors.textSecondary, fontFamily: "Nunito", margin: "0 0 16px" }}>
+            Export your data to keep a safe backup, or restore from a previous backup file.
+          </p>
+
+          {importMsg && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              marginBottom: 12,
+              background: importMsg.success ? "#E8F5E9" : "#FFEBEE",
+              color: importMsg.success ? Colors.success : Colors.error,
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: "Nunito",
+            }}>
+              {importMsg.text}
+            </div>
           )}
-        </button>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={handleExport}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                borderRadius: 10,
+                border: `1px solid ${Colors.primary}`,
+                background: Colors.white,
+                color: Colors.primary,
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: "Nunito",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <IoCloudDownloadOutline size={18} />
+              Export
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: "none" }}
+              onChange={handleImport}
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                borderRadius: 10,
+                border: "none",
+                background: Colors.primary,
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: "Nunito",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <IoCloudUploadOutline size={18} />
+              Restore
+            </button>
+          </div>
+        </div>
 
         <div
           style={{

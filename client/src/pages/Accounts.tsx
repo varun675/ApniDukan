@@ -16,7 +16,9 @@ import {
   getDailyAccount,
   saveDailyAccount,
   getDailyAccounts,
+  getBillsForDate,
   formatCurrency,
+  formatCurrencyShort,
 } from "@/lib/storage";
 import type { DailyAccount } from "@/lib/storage";
 
@@ -44,6 +46,8 @@ export default function AccountsPage() {
 
   const dateKey = formatDateKey(selectedDate);
   const isToday = dateKey === formatDateKey(new Date());
+
+  const billsSaleTotal = getBillsForDate(dateKey).reduce((sum, b) => sum + b.totalAmount, 0);
 
   const loadData = useCallback(() => {
     const acc = getDailyAccount(dateKey);
@@ -220,6 +224,53 @@ export default function AccountsPage() {
 
       <div style={styles.sectionCard}>
         <h3 style={styles.sectionTitle}>Today's Sale</h3>
+        {billsSaleTotal > 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 12px",
+            background: "#E8F5E9",
+            borderRadius: 8,
+            marginBottom: 10,
+            fontSize: 13,
+            fontFamily: "Nunito",
+            color: Colors.success,
+            fontWeight: 600,
+          }}>
+            <IoCart size={16} />
+            <span>From bills: {formatCurrencyShort(billsSaleTotal)}</span>
+            <button
+              onClick={() => {
+                setSaleAmount(billsSaleTotal.toString());
+                const expenses = account ? account.expenses : [];
+                const totalExpense = expenses.reduce((s, e) => s + e.amount, 0);
+                saveDailyAccount({
+                  date: dateKey,
+                  expenses,
+                  totalExpense,
+                  totalSale: billsSaleTotal,
+                  profit: billsSaleTotal - totalExpense,
+                });
+                loadData();
+              }}
+              style={{
+                marginLeft: "auto",
+                background: Colors.success,
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                padding: "4px 10px",
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: "Nunito",
+                cursor: "pointer",
+              }}
+            >
+              Use this
+            </button>
+          </div>
+        )}
         <div style={styles.inputRow}>
           <input
             type="text"
