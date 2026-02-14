@@ -87,11 +87,52 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     background: "none",
     cursor: "pointer",
-    padding: "4px 0",
+    padding: "8px 4px",
+    minHeight: 48,
     WebkitTapHighlightColor: "transparent",
+    transition: "all 0.2s ease",
   },
   tabLabel: {
     fontSize: 10,
     letterSpacing: 0.2,
+  },
+};
+
+// Mobile-first responsive overrides
+export const responsiveStyles = {
+  '@media (min-width: 481px)': {
+    container: {
+      maxWidth: '100%',
+    },
+    tab: {
+      padding: '10px 8px',
+      gap: 4,
+    },
+    tabLabel: {
+      fontSize: 12,
+      letterSpacing: 0.4,
+    },
+  },
+  '@media (min-width: 769px)': {
+    container: {
+      maxWidth: 1200,
+      flexDirection: 'row' as const,
+    },
+    tabBar: {
+      flexDirection: 'column' as const,
+      minWidth: 200,
+      borderTop: 'none',
+      borderRight: `1px solid ${Colors.borderLight}`,
+      paddingRight: 16,
+    },
+    tab: {
+      justifyContent: 'flex-start',
+      gap: 12,
+      paddingLeft: 16,
+    },
+    tabLabel: {
+      fontSize: 14,
+      letterSpacing: 0,
+    },
   },
 };

@@ -133,3 +133,104 @@ textarea {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* MOBILE FIRST - Base styles for mobile (320px - 480px) */
+@media (max-width: 480px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="search"],
+  textarea,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .page-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* TABLET - Medium screens (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  html {
+    font-size: 18px;
+  }
+  
+  body {
+    height: 100vh;
+  }
+  
+  #root {
+    max-width: none;
+  }
+}
+
+/* LAPTOP & DESKTOP - Large screens (769px+) */
+@media (min-width: 769px) {
+  html {
+    font-size: 18px;
+  }
+  
+  body {
+    height: 100vh;
+  }
+  
+  #root {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+}
+
+/* Touch-friendly minimum sizes */
+input,
+button,
+a,
+[role="button"] {
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+}
+
+/* Prevent double-tap zoom on buttons and inputs */
+input[type="text"],
+input[type="number"],
+input[type="tel"],
+input[type="email"],
+input[type="search"],
+textarea,
+button,
+a {
+  -webkit-touch-callout: none;
+}
+
+/* Smooth scrolling for supported browsers */
+@supports (scroll-behavior: smooth) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  * {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

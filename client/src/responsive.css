@@ -1,0 +1,177 @@
+/* Responsive Utilities Stylesheet */
+
+/* Ensure safe areas on notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
+
+/* Mobile-first font scaling */
+:root {
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+  --touch-target-min: 44px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+/* Extended touch targets for better mobile usability */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"],
+[role="tab"],
+[role="link"] {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Input fields responsive sizing */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  min-height: 44px;
+  font-size: 16px !important;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+/* Tablet breakpoint (481px - 768px) */
+@media (min-width: 481px) {
+  :root {
+    --font-size-base: 15px;
+    --font-size-lg: 17px;
+    --font-size-xl: 20px;
+    --touch-target-min: 48px;
+  }
+  
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    min-height: 48px;
+    padding: 12px 14px;
+  }
+}
+
+/* Desktop breakpoint (769px+) */
+@media (min-width: 769px) {
+  :root {
+    --font-size-base: 16px;
+    --font-size-lg: 18px;
+    --font-size-xl: 22px;
+    --touch-target-min: 40px;
+    --spacing-lg: 32px;
+    --spacing-xl: 48px;
+  }
+  
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    min-height: auto;
+    padding: 10px 12px;
+  }
+  
+  body {
+    font-size: 16px;
+  }
+}
+
+/* Remove iOS default styling */
+input,
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Responsive text sizing for different elements */
+@media (min-width: 481px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 769px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Better list item touch targets */
+li,
+[role="listitem"] {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+@media (min-width: 769px) {
+  li,
+  [role="listitem"] {
+    min-height: auto;
+  }
+}
+
+/* Spacing utilities responsive */
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+
+.m-xs { margin: var(--spacing-xs); }
+.m-sm { margin: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+.m-lg { margin: var(--spacing-lg); }
+
+/* Flex utilities */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Grid utilities with auto-fit for responsive layouts */
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-md);
+}
+
+/* Prevent layout shift from scrollbar */
+html {
+  overflow-y: scroll;
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

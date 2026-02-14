@@ -47,6 +47,10 @@ export default function BillDetailPage() {
     setBill({ ...bill, paid: newPaid });
   };
 
+  const handleEndSale = () => {
+    navigate("/create-bill");
+  };
+
   const buildBillMessage = (): string => {
     if (!bill || !settings) return "";
     const date = new Date(bill.createdAt);
@@ -360,6 +364,11 @@ export default function BillDetailPage() {
           <span style={styles.whatsappBtnText}>Share on WhatsApp</span>
         </button>
 
+        <button style={styles.endSaleBtn} onClick={handleEndSale}>
+          <IoCheckmarkCircle size={20} color={Colors.white} />
+          <span style={styles.endSaleBtnText}>End Sale & New Bill</span>
+        </button>
+
         <p style={styles.footer}>Powered by Codesmotech Consulting Pvt Ltd</p>
       </div>
     </div>
@@ -586,12 +595,35 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "none",
     borderRadius: 14,
     cursor: "pointer",
-    marginBottom: 24,
+    marginBottom: 12,
     fontSize: 15,
     fontWeight: 700,
     fontFamily: "Nunito",
   },
   whatsappBtnText: {
+    fontFamily: "Nunito",
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#fff",
+  },
+  endSaleBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
+    padding: "14px 24px",
+    background: Colors.success,
+    color: "#fff",
+    border: "none",
+    borderRadius: 14,
+    cursor: "pointer",
+    marginBottom: 24,
+    fontSize: 15,
+    fontWeight: 700,
+    fontFamily: "Nunito",
+  },
+  endSaleBtnText: {
     fontFamily: "Nunito",
     fontSize: 15,
     fontWeight: 700,

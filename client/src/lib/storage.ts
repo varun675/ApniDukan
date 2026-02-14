@@ -84,11 +84,24 @@ function getJSON<T>(key: string, fallback: T): T {
 }
 
 function setJSON(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to save ${key} to localStorage:`, error);
+    if (error instanceof Error && error.message.includes('QuotaExceededError')) {
+      console.warn('LocalStorage quota exceeded. Some data may not be saved.');
+    }
+  }
 }
 
 export function getItems(): Item[] {
   return getJSON<Item[]>(KEYS.ITEMS, []);
+}
+
+export function getTodaysItems(): Item[] {
+  const items = getItems();
+  const today = new Date().toISOString().split('T')[0];
+  return items.filter((item) => item.createdAt.split('T')[0] === today);
 }
 
 export function saveItem(item: Omit<Item, "id" | "createdAt" | "updatedAt">): Item {
@@ -181,15 +194,46 @@ export function getFlashSaleRemainingTime(): { hours: number; minutes: number; s
 }
 
 export function getBills(): Bill[] {
-  const data = localStorage.getItem(KEYS.BILLS);
-  if (!data) return [];
-  const bills: Bill[] = JSON.parse(data);
-  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  const filtered = bills.filter((b) => new Date(b.createdAt).getTime() > ninetyDaysAgo);
-  if (filtered.length !== bills.length) {
-    setJSON(KEYS.BILLS, filtered);
+  try {
+    const data = localStorage.getItem(KEYS.BILLS);
+    if (!data) return [];
+    
+    const bills: Bill[] = JSON.parse(data);
+    
+    // Validate bills structure
+    const validBills = bills.filter((b) => {
+      return b.id && b.billNumber && b.createdAt && 
+             typeof b.totalAmount === 'number' && 
+             Array.isArray(b.items);
+    });
+    
+    // Clean up bills older than 90 days
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const filtered = validBills.filter((b) => {
+      try {
+        return new Date(b.createdAt).getTime() > ninetyDaysAgo;
+      } catch {
+        console.warn('Invalid date in bill:', b.createdAt);
+        return true;
+      }
+    });
+    
+    // Save filtered list if it changed
+    if (filtered.length !== bills.length) {
+      setJSON(KEYS.BILLS, filtered);
+    }
+    
+    return filtered;
+  } catch (error) {
+    console.error('Error reading bills from localStorage:', error);
+    return [];
   }
-  return filtered;
+}
+
+export function getTodaysBills(): Bill[] {
+  const bills = getBills();
+  const today = new Date().toISOString().split('T')[0];
+  return bills.filter((b) => b.createdAt.split('T')[0] === today);
 }
 
 export function groupBillsByDate(bills: Bill[]): { date: string; dateLabel: string; bills: Bill[] }[] {
@@ -228,9 +272,14 @@ export function saveBill(bill: Omit<Bill, "id" | "createdAt" | "billNumber">): B
     id: generateId(),
     billNumber: generateBillNumber(bills),
     createdAt: new Date().toISOString(),
+    items: bill.items || [],
+    totalAmount: bill.totalAmount || 0,
   };
-  bills.unshift(newBill);
-  setJSON(KEYS.BILLS, bills);
+  
+  // Ensure today's bills are preserved
+  const updatedBills = [newBill, ...bills];
+  setJSON(KEYS.BILLS, updatedBills);
+  
   return newBill;
 }
 

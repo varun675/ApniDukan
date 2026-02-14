@@ -1,14 +1,22 @@
 {
-  "name": "Apni Dukan",
+  "name": "Apni Dukan - Grocery Shop Management",
   "short_name": "Apni Dukan",
-  "description": "Mobile grocery shop management - daily price lists, bills, UPI payments",
+  "description": "Manage your grocery shop - daily price lists, bills, UPI payments, and accounts tracking",
   "start_url": "/ApniDukan/",
   "scope": "/ApniDukan/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FF8F00",
+  "background_color": "#FFF8F0",
   "theme_color": "#FF8F00",
   "categories": ["business", "shopping", "productivity"],
+  "screenshots": [
+    {
+      "src": "/ApniDukan/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
   "icons": [
     {
       "src": "/ApniDukan/pwa-icon-192.png",
@@ -21,6 +29,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create Bill",
+      "short_name": "New Bill",
+      "description": "Create a new bill quickly",
+      "url": "/ApniDukan/create-bill"
+    },
+    {
+      "name": "View Bills",
+      "short_name": "Bills",
+      "description": "View all bills",
+      "url": "/ApniDukan/bills"
     }
   ]
 }
