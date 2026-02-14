@@ -28,10 +28,5 @@
     "client/src/**/*.ts",
     "client/src/**/*.tsx",
     "client/vite-env.d.ts"
-  ],
-  "references": [
-    {
-      "path": "./client"
-    }
   ]
 }
